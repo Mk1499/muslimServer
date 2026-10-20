@@ -1,4 +1,92 @@
-import { Controller } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+  Param,
+  Patch,
+} from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Request } from 'express';
+import { Types } from 'mongoose';
+
+import { Roles } from '../auth/decorators/roles.decorator';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { UserRole } from '../users/user-role.enum';
+import { CreateVideoDto } from './dto/create-video.dto';
+import { VideosService } from './videos.service';
+import { GetVideosQueryDto } from './dto/get-videos-query.dto';
+import { UpdateVideoDto } from './dto/update-video.dto';
+
+interface AuthenticatedRequest extends Request {
+  user: {
+    id: string;
+    email: string;
+    role: UserRole;
+  };
+}
 
 @Controller('videos')
-export class VideosController {}
+export class VideosController {
+  constructor(private readonly videosService: VideosService) {}
+
+  @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  create(@Body() dto: CreateVideoDto, @Req() req: AuthenticatedRequest) {
+    return this.videosService.create(dto, new Types.ObjectId(req.user.id));
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  update(@Param('id') id: string, @Body() dto: UpdateVideoDto) {
+    return this.videosService.update(id, dto);
+  }
+
+  @Patch(':id/publish')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  publish(@Param('id') id: string) {
+    return this.videosService.publish(id);
+  }
+
+  @Patch(':id/archive')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  archive(@Param('id') id: string) {
+    return this.videosService.archive(id);
+  }
+
+  @Get('all')
+  findAll(@Query() query: GetVideosQueryDto) {
+    return this.videosService.findAll(query);
+  }
+
+  @Get('published')
+  findPublished(@Query() query: GetVideosQueryDto) {
+    return this.videosService.findPublished(query);
+  }
+
+  @Get('drafted')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  findDrafts(@Query() query: GetVideosQueryDto) {
+    return this.videosService.findDraft(query);
+  }
+
+  @Get('archived')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  findArchived(@Query() query: GetVideosQueryDto) {
+    return this.videosService.findArchived(query);
+  }
+
+  @Get(':id')
+  findPublishedById(@Param('id') id: string) {
+    return this.videosService.findPublishedById(id);
+  }
+}
