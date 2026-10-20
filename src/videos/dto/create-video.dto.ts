@@ -1,4 +1,7 @@
 import {
+  ArrayUnique,
+  IsArray,
+  IsMongoId,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -22,4 +25,22 @@ export class CreateVideoDto {
     message: 'youtubeVideoId must be a valid YouTube video ID',
   })
   youtubeVideoId!: string;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsMongoId({ each: true })
+  categories?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsMongoId({ each: true })
+  tags?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ArrayUnique()
+  @IsMongoId({ each: true })
+  speakers?: string[];
 }

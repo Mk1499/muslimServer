@@ -11,20 +11,59 @@ import { Video, VideoDocument } from './schemas/video.schema';
 import { VideoStatus } from './schemas/video.schema';
 import { GetVideosQueryDto } from './dto/get-videos-query.dto';
 import { UpdateVideoDto } from './dto/update-video.dto';
+import { CategoriesService } from 'src/categories/categories.service';
+import { TagsService } from 'src/tags/tags.service';
+import { SpeakersService } from 'src/speakers/speakers.service';
 
 @Injectable()
 export class VideosService {
   constructor(
     @InjectModel(Video.name)
     private readonly videoModel: Model<VideoDocument>,
+    private readonly categoriesService: CategoriesService,
+    private readonly tagsService: TagsService,
+    private readonly speakersService: SpeakersService,
   ) {}
 
   async create(
     createVideoDto: CreateVideoDto,
     createdBy: Types.ObjectId,
   ): Promise<VideoDocument> {
+    const categories = createVideoDto.categories ?? [];
+    const tags = createVideoDto.tags ?? [];
+    const speakers = createVideoDto.speakers ?? [];
+
+    const [categoriesValid, tagsValid, speakersValid] = await Promise.all([
+      this.categoriesService.areActive(categories),
+      this.tagsService.areActive(tags),
+      this.speakersService.areActive(speakers),
+    ]);
+
+    if (!categoriesValid) {
+      throw new BadRequestException(
+        'One or more categories do not exist or are inactive',
+      );
+    }
+
+    if (!tagsValid) {
+      throw new BadRequestException(
+        'One or more tags do not exist or are inactive',
+      );
+    }
+
+    if (!speakersValid) {
+      throw new BadRequestException(
+        'One or more speakers do not exist or are inactive',
+      );
+    }
+
     const video = new this.videoModel({
-      ...createVideoDto,
+      title: createVideoDto.title,
+      description: createVideoDto.description,
+      youtubeVideoId: createVideoDto.youtubeVideoId,
+      categories: categories.map((id) => new Types.ObjectId(id)),
+      tags: tags.map((id) => new Types.ObjectId(id)),
+      speakers: speakers.map((id) => new Types.ObjectId(id)),
       createdBy,
     });
 

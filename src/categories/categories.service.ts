@@ -46,4 +46,17 @@ export class CategoriesService {
       },
     };
   }
+
+  async areActive(ids: string[]): Promise<boolean> {
+    if (ids.length === 0) {
+      return true;
+    }
+
+    const count = await this.categoryModel.countDocuments({
+      _id: { $in: ids },
+      isActive: true,
+    });
+
+    return count === ids.length;
+  }
 }
