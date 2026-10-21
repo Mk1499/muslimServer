@@ -15,6 +15,17 @@ import { CategoriesService } from 'src/categories/categories.service';
 import { TagsService } from 'src/tags/tags.service';
 import { SpeakersService } from 'src/speakers/speakers.service';
 
+/**
+ * Restricts a list query to the videos credited to one speaker. The DTO
+ * already guarantees `speaker` is a valid ObjectId when present.
+ */
+function speakerFilter(query: GetVideosQueryDto): Record<string, unknown> {
+  if (!query.speaker || !Types.ObjectId.isValid(query.speaker)) {
+    return {};
+  }
+  return { speakers: new Types.ObjectId(query.speaker) };
+}
+
 @Injectable()
 export class VideosService {
   constructor(
@@ -151,10 +162,11 @@ export class VideosService {
     const page = query.page;
     const limit = query.limit;
     const skip = (page - 1) * limit;
+    const filter = speakerFilter(query);
 
     const [videos, total] = await Promise.all([
       this.videoModel
-        .find()
+        .find(filter)
         .select('title description youtubeVideoId publishedAt')
         .sort({ publishedAt: -1, _id: -1 })
         .skip(skip)
@@ -162,7 +174,7 @@ export class VideosService {
         .lean()
         .exec(),
 
-      this.videoModel.countDocuments().exec(),
+      this.videoModel.countDocuments(filter).exec(),
     ]);
 
     return {
@@ -181,7 +193,7 @@ export class VideosService {
     const limit = query.limit;
     const skip = (page - 1) * limit;
 
-    const filter = { status: VideoStatus.PUBLISHED };
+    const filter = { status: VideoStatus.PUBLISHED, ...speakerFilter(query) };
 
     const [videos, total] = await Promise.all([
       this.videoModel
@@ -212,7 +224,7 @@ export class VideosService {
     const limit = query.limit;
     const skip = (page - 1) * limit;
 
-    const filter = { status: VideoStatus.ARCHIVED };
+    const filter = { status: VideoStatus.ARCHIVED, ...speakerFilter(query) };
 
     const [videos, total] = await Promise.all([
       this.videoModel
@@ -243,7 +255,7 @@ export class VideosService {
     const limit = query.limit;
     const skip = (page - 1) * limit;
 
-    const filter = { status: VideoStatus.DRAFT };
+    const filter = { status: VideoStatus.DRAFT, ...speakerFilter(query) };
 
     const [videos, total] = await Promise.all([
       this.videoModel
