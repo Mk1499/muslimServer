@@ -9,6 +9,7 @@ import { AuthModule } from './auth/auth.module';
 import { CategoriesModule } from './categories/categories.module';
 import { TagsModule } from './tags/tags.module';
 import { SpeakersModule } from './speakers/speakers.module';
+import { PlaylistsModule } from './playlists/playlists.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { SpeakersModule } from './speakers/speakers.module';
     CategoriesModule,
     TagsModule,
     SpeakersModule,
+    PlaylistsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

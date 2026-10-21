@@ -1,13 +1,17 @@
 import {
   ArrayUnique,
   IsArray,
+  IsInt,
   IsMongoId,
   IsNotEmpty,
   IsOptional,
   IsString,
   Matches,
+  Max,
   MaxLength,
+  Min,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateVideoDto {
   @IsString()
@@ -25,6 +29,14 @@ export class CreateVideoDto {
     message: 'youtubeVideoId must be a valid YouTube video ID',
   })
   youtubeVideoId!: string;
+
+  /** Length of the video in whole seconds. */
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  @Max(86400)
+  duration?: number;
 
   @IsOptional()
   @IsArray()

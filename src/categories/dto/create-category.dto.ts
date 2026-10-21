@@ -12,6 +12,16 @@ export class CreateCategoryDto {
   @MaxLength(100)
   name!: string;
 
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  nameAr?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  nameEn?: string;
+
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)

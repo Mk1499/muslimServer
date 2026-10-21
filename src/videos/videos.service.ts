@@ -72,6 +72,7 @@ export class VideosService {
       title: createVideoDto.title,
       description: createVideoDto.description,
       youtubeVideoId: createVideoDto.youtubeVideoId,
+      duration: createVideoDto.duration ?? 0,
       categories: categories.map((id) => new Types.ObjectId(id)),
       tags: tags.map((id) => new Types.ObjectId(id)),
       speakers: speakers.map((id) => new Types.ObjectId(id)),
@@ -158,6 +159,19 @@ export class VideosService {
     return video;
   }
 
+  async arePublished(ids: string[]): Promise<boolean> {
+    if (ids.length === 0) {
+      return true;
+    }
+
+    const count = await this.videoModel.countDocuments({
+      _id: { $in: ids },
+      status: VideoStatus.PUBLISHED,
+    });
+
+    return count === ids.length;
+  }
+
   async findAll(query: GetVideosQueryDto) {
     const page = query.page;
     const limit = query.limit;
@@ -167,7 +181,7 @@ export class VideosService {
     const [videos, total] = await Promise.all([
       this.videoModel
         .find(filter)
-        .select('title description youtubeVideoId publishedAt')
+        .select('title description youtubeVideoId publishedAt views duration')
         .sort({ publishedAt: -1, _id: -1 })
         .skip(skip)
         .limit(limit)
@@ -198,7 +212,7 @@ export class VideosService {
     const [videos, total] = await Promise.all([
       this.videoModel
         .find(filter)
-        .select('title description youtubeVideoId publishedAt')
+        .select('title description youtubeVideoId publishedAt views duration')
         .sort({ publishedAt: -1, _id: -1 })
         .skip(skip)
         .limit(limit)
@@ -229,7 +243,7 @@ export class VideosService {
     const [videos, total] = await Promise.all([
       this.videoModel
         .find(filter)
-        .select('title description youtubeVideoId publishedAt')
+        .select('title description youtubeVideoId publishedAt views duration')
         .sort({ publishedAt: -1, _id: -1 })
         .skip(skip)
         .limit(limit)
@@ -260,7 +274,7 @@ export class VideosService {
     const [videos, total] = await Promise.all([
       this.videoModel
         .find(filter)
-        .select('title description youtubeVideoId publishedAt')
+        .select('title description youtubeVideoId publishedAt views duration')
         .sort({ publishedAt: -1, _id: -1 })
         .skip(skip)
         .limit(limit)
@@ -288,7 +302,7 @@ export class VideosService {
     const video = await this.videoModel
       .findOne({ _id: id, status: VideoStatus.PUBLISHED })
       .select(
-        'title description youtubeVideoId categories tags speakers publishedAt',
+        'title description youtubeVideoId categories tags speakers publishedAt views duration',
       )
       .lean()
       .exec();
@@ -296,6 +310,43 @@ export class VideosService {
     if (!video) {
       throw new NotFoundException('Video not found');
     }
+    return video;
+  }
+
+  /**
+   * Counts a view and returns the video to watch. The increment and the read
+   * are a single atomic `findOneAndUpdate`, so concurrent watches cannot
+   * lose a count and the response always carries the post-increment value.
+   *
+   * Only published videos are counted — drafts and archived videos are not
+   * publicly watchable, so they are not found here.
+   *
+   * The speakers credited on the video are credited with the view too, so a
+   * speaker's count follows the reach of their videos.
+   */
+  async watch(id: string): Promise<VideoDocument> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid video ID');
+    }
+
+    const video = await this.videoModel
+      .findOneAndUpdate(
+        { _id: id, status: VideoStatus.PUBLISHED },
+        { $inc: { views: 1 } },
+        { returnDocument: 'after', runValidators: true },
+      )
+      .select(
+        'title description youtubeVideoId categories tags speakers publishedAt views duration',
+      )
+      .lean()
+      .exec();
+
+    if (!video) {
+      throw new NotFoundException('Video not found');
+    }
+
+    await this.speakersService.incrementViews(video.speakers);
+
     return video;
   }
 }

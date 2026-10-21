@@ -39,6 +39,15 @@ export class SpeakersController {
     return this.speakersService.findAll(query);
   }
 
+  /**
+   * Active speakers ordered by their view count. Declared before `:id` so
+   * "featured" is not captured as a speaker id.
+   */
+  @Get('featured')
+  findFeatured(@Query() query: GetSpeakersDto) {
+    return this.speakersService.findFeatured(query);
+  }
+
   /** Public read, deleted ones included, so the admin profile page can deep-link. */
   @Get(':id')
   findOne(@Param('id') id: string) {

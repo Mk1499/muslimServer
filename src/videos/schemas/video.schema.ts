@@ -62,6 +62,22 @@ export class Video {
   })
   publishedAt!: Date | null;
 
+  /** Number of times the video was watched. Server-controlled only. */
+  @Prop({
+    type: Number,
+    default: 0,
+    min: 0,
+  })
+  views!: number;
+
+  /** Length of the video in whole seconds. 0 when unknown. */
+  @Prop({
+    type: Number,
+    default: 0,
+    min: 0,
+  })
+  duration!: number;
+
   @Prop({
     type: Types.ObjectId,
     ref: 'User',

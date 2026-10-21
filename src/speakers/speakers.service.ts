@@ -32,7 +32,9 @@ export class SpeakersService {
     const [speakers, total] = await Promise.all([
       this.speakerModel
         .find({ isActive: true })
-        .select('name bio imageUrl')
+        .select(
+          'name nameAr nameEn bio bioAr bioEn imageUrl instagramProfileUrl tiktokProfileUrl facebookProfileUrl youtubeProfileUrl views',
+        )
         .sort({ name: 1 })
         .skip((page - 1) * limit)
         .limit(limit)
@@ -62,6 +64,57 @@ export class SpeakersService {
     });
 
     return count === ids.length;
+  }
+
+  /**
+   * Adds one view to every given speaker. Called when a video they are
+   * credited on is watched, so their total follows the reach of their videos.
+   */
+  async incrementViews(ids: (string | Types.ObjectId)[]): Promise<void> {
+    const objectIds = ids
+      .filter((id) => Types.ObjectId.isValid(id))
+      .map((id) => new Types.ObjectId(id));
+
+    if (objectIds.length === 0) {
+      return;
+    }
+
+    await this.speakerModel
+      .updateMany({ _id: { $in: objectIds } }, { $inc: { views: 1 } })
+      .exec();
+  }
+
+  /**
+   * Active speakers ordered by how many views their videos got — the
+   * "featured" list. Only the fields a public listing needs are returned.
+   */
+  async findFeatured(query: GetSpeakersDto) {
+    const { page, limit } = query;
+    const filter = { isActive: true };
+
+    const [speakers, total] = await Promise.all([
+      this.speakerModel
+        .find(filter)
+        .select(
+          'name nameAr nameEn bio bioAr bioEn imageUrl instagramProfileUrl tiktokProfileUrl facebookProfileUrl youtubeProfileUrl views',
+        )
+        .sort({ views: -1, _id: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .lean()
+        .exec(),
+      this.speakerModel.countDocuments(filter).exec(),
+    ]);
+
+    return {
+      data: speakers,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 
   async update(id: string, dto: UpdateSpeakerDto, updatedBy: Types.ObjectId) {

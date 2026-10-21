@@ -27,7 +27,7 @@ export class CategoriesService {
     const [categories, total] = await Promise.all([
       this.categoryModel
         .find({ isActive: true })
-        .select('name slug description')
+        .select('name nameAr nameEn slug description')
         .sort({ name: 1 })
         .skip((page - 1) * limit)
         .limit(limit)

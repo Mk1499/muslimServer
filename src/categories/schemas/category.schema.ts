@@ -13,6 +13,20 @@ export class Category {
   name!: string;
 
   @Prop({
+    default: '',
+    trim: true,
+    maxlength: 100,
+  })
+  nameAr!: string;
+
+  @Prop({
+    default: '',
+    trim: true,
+    maxlength: 100,
+  })
+  nameEn!: string;
+
+  @Prop({
     required: true,
     unique: true,
     lowercase: true,

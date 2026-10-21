@@ -21,5 +21,6 @@ import { SpeakersModule } from 'src/speakers/speakers.module';
   ],
   controllers: [VideosController],
   providers: [VideosService],
+  exports: [VideosService],
 })
 export class VideosModule {}

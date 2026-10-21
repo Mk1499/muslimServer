@@ -85,6 +85,15 @@ export class VideosController {
     return this.videosService.findArchived(query);
   }
 
+  /**
+   * Public watch: counts the view and returns the video to play. Declared
+   * before `:id` so the more specific path is matched first.
+   */
+  @Get(':id/watch')
+  watch(@Param('id') id: string) {
+    return this.videosService.watch(id);
+  }
+
   @Get(':id')
   findPublishedById(@Param('id') id: string) {
     return this.videosService.findPublishedById(id);
