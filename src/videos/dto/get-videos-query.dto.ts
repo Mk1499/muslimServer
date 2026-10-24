@@ -19,4 +19,12 @@ export class GetVideosQueryDto {
   @IsOptional()
   @IsMongoId()
   speaker?: string;
+
+  @IsOptional()
+  @IsMongoId()
+  category?: string;
+
+  @IsOptional()
+  @IsMongoId()
+  tag?: string;
 }

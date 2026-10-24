@@ -40,13 +40,6 @@ export class VideosController {
     return this.videosService.create(dto, new Types.ObjectId(req.user.id));
   }
 
-  @Patch(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  update(@Param('id') id: string, @Body() dto: UpdateVideoDto) {
-    return this.videosService.update(id, dto);
-  }
-
   @Patch(':id/publish')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
@@ -59,6 +52,13 @@ export class VideosController {
   @Roles(UserRole.ADMIN)
   archive(@Param('id') id: string) {
     return this.videosService.archive(id);
+  }
+
+  @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  update(@Param('id') id: string, @Body() dto: UpdateVideoDto) {
+    return this.videosService.update(id, dto);
   }
 
   @Get('all')
@@ -83,6 +83,11 @@ export class VideosController {
   @Roles(UserRole.ADMIN)
   findArchived(@Query() query: GetVideosQueryDto) {
     return this.videosService.findArchived(query);
+  }
+
+  @Get('featured')
+  findFeatured(@Query() query: GetVideosQueryDto) {
+    return this.videosService.findFeatured(query);
   }
 
   /**

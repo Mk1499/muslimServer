@@ -84,6 +84,26 @@ export class Video {
     required: true,
   })
   createdBy!: Types.ObjectId;
+
+  @Prop({
+    type: Boolean,
+    default: false,
+  })
+  isFeatured!: boolean;
+
+  @Prop({
+    type: Number,
+    default: 0,
+    min: 0,
+  })
+  likes!: number;
+
+  @Prop({
+    type: Number,
+    default: 0,
+    min: 0,
+  })
+  dislikes!: number;
 }
 
 export const VideoSchema = SchemaFactory.createForClass(Video);

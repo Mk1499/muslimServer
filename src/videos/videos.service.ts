@@ -14,7 +14,7 @@ import { UpdateVideoDto } from './dto/update-video.dto';
 import { CategoriesService } from 'src/categories/categories.service';
 import { TagsService } from 'src/tags/tags.service';
 import { SpeakersService } from 'src/speakers/speakers.service';
-
+import { Innertube } from 'youtubei.js';
 /**
  * Restricts a list query to the videos credited to one speaker. The DTO
  * already guarantees `speaker` is a valid ObjectId when present.
@@ -43,6 +43,8 @@ export class VideosService {
     const categories = createVideoDto.categories ?? [];
     const tags = createVideoDto.tags ?? [];
     const speakers = createVideoDto.speakers ?? [];
+    const youtube = await Innertube.create();
+    const info = await youtube.getInfo(createVideoDto.youtubeVideoId);
 
     const [categoriesValid, tagsValid, speakersValid] = await Promise.all([
       this.categoriesService.areActive(categories),
@@ -70,9 +72,11 @@ export class VideosService {
 
     const video = new this.videoModel({
       title: createVideoDto.title,
-      description: createVideoDto.description,
+      description:
+        (createVideoDto.description || info.basic_info?.short_description) ??
+        '',
       youtubeVideoId: createVideoDto.youtubeVideoId,
-      duration: createVideoDto.duration ?? 0,
+      duration: info.basic_info?.duration ?? 0,
       categories: categories.map((id) => new Types.ObjectId(id)),
       tags: tags.map((id) => new Types.ObjectId(id)),
       speakers: speakers.map((id) => new Types.ObjectId(id)),
@@ -181,7 +185,9 @@ export class VideosService {
     const [videos, total] = await Promise.all([
       this.videoModel
         .find(filter)
-        .select('title description youtubeVideoId publishedAt views duration')
+        .select(
+          'title description youtubeVideoId publishedAt views duration isFeatured likes dislikes',
+        )
         .sort({ publishedAt: -1, _id: -1 })
         .skip(skip)
         .limit(limit)
@@ -208,6 +214,38 @@ export class VideosService {
     const skip = (page - 1) * limit;
 
     const filter = { status: VideoStatus.PUBLISHED, ...speakerFilter(query) };
+
+    const [videos, total] = await Promise.all([
+      this.videoModel
+        .find(filter)
+        .select(
+          'title description youtubeVideoId publishedAt views duration isFeatured likes dislikes',
+        )
+        .sort({ publishedAt: -1, _id: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean()
+        .exec(),
+
+      this.videoModel.countDocuments(filter).exec(),
+    ]);
+
+    return {
+      data: videos,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async findFeatured(query: GetVideosQueryDto) {
+    const { limit, page } = query ?? {};
+    const skip = (page - 1) * limit;
+
+    const filter = { isFeatured: true, ...speakerFilter(query) };
 
     const [videos, total] = await Promise.all([
       this.videoModel

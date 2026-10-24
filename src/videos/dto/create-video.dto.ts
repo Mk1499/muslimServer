@@ -1,6 +1,7 @@
 import {
   ArrayUnique,
   IsArray,
+  IsBoolean,
   IsInt,
   IsMongoId,
   IsNotEmpty,
@@ -37,6 +38,10 @@ export class CreateVideoDto {
   @Min(0)
   @Max(86400)
   duration?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  isFeatured?: boolean;
 
   @IsOptional()
   @IsArray()
