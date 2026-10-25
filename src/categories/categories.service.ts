@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { Category, CategoryDocument } from './schemas/category.schema';
 import { GetCategoriesDto } from './dto/get-categories.dto';
+import { UpdateCategoryDto } from './dto/update-category.dto';
 
 @Injectable()
 export class CategoriesService {
@@ -58,5 +59,13 @@ export class CategoriesService {
     });
 
     return count === ids.length;
+  }
+
+  async update(id: string, dto: UpdateCategoryDto) {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid speaker ID');
+    }
+
+    return this.categoryModel.findByIdAndUpdate(id, dto, { new: true }).exec();
   }
 }
