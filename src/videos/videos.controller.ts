@@ -90,6 +90,16 @@ export class VideosController {
     return this.videosService.findFeatured(query);
   }
 
+  @Get('most-viewed')
+  findMostViewed(@Query() query: GetVideosQueryDto) {
+    return this.videosService.findMostViewed(query);
+  }
+
+  @Get('latest')
+  findLatest(@Query() query: GetVideosQueryDto) {
+    return this.videosService.findLatest(query);
+  }
+
   /**
    * Public watch: counts the view and returns the video to play. Declared
    * before `:id` so the more specific path is matched first.

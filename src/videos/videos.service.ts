@@ -273,6 +273,65 @@ export class VideosService {
     };
   }
 
+  async findMostViewed(query: GetVideosQueryDto) {
+    const { limit, page } = query ?? {};
+    const skip = (page - 1) * limit;
+    const filter = { status: VideoStatus.PUBLISHED, ...speakerFilter(query) };
+
+    const [videos, total] = await Promise.all([
+      this.videoModel
+        .find(filter)
+        .select('title description youtubeVideoId publishedAt views duration')
+        .sort({ views: -1, _id: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('speakers categories tags')
+        .lean()
+        .exec(),
+
+      this.videoModel.countDocuments(filter).exec(),
+    ]);
+    return {
+      data: videos,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  async findLatest(query: GetVideosQueryDto) {
+    const { limit, page } = query ?? {};
+    const skip = (page - 1) * limit;
+    const filter = { status: VideoStatus.PUBLISHED, ...speakerFilter(query) };
+
+    const [videos, total] = await Promise.all([
+      this.videoModel
+        .find(filter)
+        .select('title description youtubeVideoId publishedAt views duration')
+        .sort({ publishedAt: -1, _id: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('speakers categories tags')
+        .lean()
+        .exec(),
+
+      this.videoModel.countDocuments(filter).exec(),
+    ]);
+
+    return {
+      data: videos,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
   async findArchived(query: GetVideosQueryDto) {
     const page = query.page;
     const limit = query.limit;
@@ -353,17 +412,6 @@ export class VideosService {
     return video;
   }
 
-  /**
-   * Counts a view and returns the video to watch. The increment and the read
-   * are a single atomic `findOneAndUpdate`, so concurrent watches cannot
-   * lose a count and the response always carries the post-increment value.
-   *
-   * Only published videos are counted — drafts and archived videos are not
-   * publicly watchable, so they are not found here.
-   *
-   * The speakers credited on the video are credited with the view too, so a
-   * speaker's count follows the reach of their videos.
-   */
   async watch(id: string): Promise<VideoDocument> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid video ID');
