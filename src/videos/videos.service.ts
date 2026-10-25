@@ -224,6 +224,7 @@ export class VideosService {
         .sort({ publishedAt: -1, _id: -1 })
         .skip(skip)
         .limit(limit)
+        .populate('speakers categories tags')
         .lean()
         .exec(),
 
@@ -254,6 +255,7 @@ export class VideosService {
         .sort({ publishedAt: -1, _id: -1 })
         .skip(skip)
         .limit(limit)
+        .populate('speakers categories tags')
         .lean()
         .exec(),
 
