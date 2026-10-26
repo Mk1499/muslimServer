@@ -45,7 +45,12 @@ export class VideosService {
     const tags = createVideoDto.tags ?? [];
     const speakers = createVideoDto.speakers ?? [];
     const youtube = await Innertube.create();
-    const info = await youtube.getInfo(createVideoDto.youtubeVideoId);
+    let info = {};
+    try {
+     info = await youtube.getInfo(createVideoDto.youtubeVideoId);
+    } catch(err){
+      console.error("Erorr while fetching video info : ", info)
+    }
 
     const [categoriesValid, tagsValid, speakersValid] = await Promise.all([
       this.categoriesService.areActive(categories),
