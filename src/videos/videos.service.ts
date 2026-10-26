@@ -10,6 +10,7 @@ import { CreateVideoDto } from './dto/create-video.dto';
 import { Video, VideoDocument } from './schemas/video.schema';
 import { VideoStatus } from './schemas/video.schema';
 import { GetVideosQueryDto } from './dto/get-videos-query.dto';
+import { GetRelatedVideosDto } from './dto/get-related-videos.dto';
 import { UpdateVideoDto } from './dto/update-video.dto';
 import { CategoriesService } from 'src/categories/categories.service';
 import { TagsService } from 'src/tags/tags.service';
@@ -385,6 +386,130 @@ export class VideosService {
 
     return {
       data: videos,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
+
+  /**
+   * Videos to watch next: published videos that share categories, tags or
+   * speakers with the given one, ranked by how many of those they share.
+   * Videos with nothing in common are not related and are left out.
+   *
+   * The ranking is done in an aggregation so the database does the scoring
+   * and pagination; only the page's ids are then loaded and populated, which
+   * keeps the populated shape identical to the other public lists.
+   */
+  async findRelated(id: string, query: GetRelatedVideosDto) {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid video ID');
+    }
+
+    const video = await this.videoModel
+      .findById(id)
+      .select('categories tags speakers status')
+      .lean()
+      .exec();
+
+    // Only published videos are public, so only they have a related list.
+    if (!video || video.status !== VideoStatus.PUBLISHED) {
+      throw new NotFoundException('Video not found');
+    }
+
+    const { page, limit } = query;
+    const skip = (page - 1) * limit;
+
+    const [result] = await this.videoModel
+      .aggregate<{
+        data: { _id: Types.ObjectId }[];
+        total: { count: number }[];
+      }>([
+        {
+          $match: {
+            _id: { $ne: new Types.ObjectId(id) },
+            status: VideoStatus.PUBLISHED,
+          },
+        },
+        {
+          $addFields: {
+            score: {
+              $add: [
+                {
+                  $size: {
+                    $setIntersection: [
+                      { $ifNull: ['$categories', []] },
+                      video.categories ?? [],
+                    ],
+                  },
+                },
+                {
+                  $size: {
+                    $setIntersection: [
+                      { $ifNull: ['$tags', []] },
+                      video.tags ?? [],
+                    ],
+                  },
+                },
+                {
+                  $size: {
+                    $setIntersection: [
+                      { $ifNull: ['$speakers', []] },
+                      video.speakers ?? [],
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        },
+        { $match: { score: { $gt: 0 } } },
+        {
+          $facet: {
+            data: [
+              { $sort: { score: -1, publishedAt: -1, _id: -1 } },
+              { $skip: skip },
+              { $limit: limit },
+              { $project: { _id: 1 } },
+            ],
+            total: [{ $count: 'count' }],
+          },
+        },
+      ])
+      .exec();
+
+    const total = result.total[0]?.count ?? 0;
+    const ids = result.data.map((related) => related._id);
+
+    if (ids.length === 0) {
+      return {
+        data: [],
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages: Math.ceil(total / limit),
+        },
+      };
+    }
+
+    const videos = await this.videoModel
+      .find({ _id: { $in: ids } })
+      .select(
+        'title description youtubeVideoId categories tags speakers publishedAt views duration isFeatured likes dislikes',
+      )
+      .populate('speakers categories tags')
+      .lean()
+      .exec();
+
+    // `$in` does not preserve the ranking order, so restore it.
+    const byId = new Map(videos.map((found) => [String(found._id), found]));
+
+    return {
+      data: ids.map((relatedId) => byId.get(String(relatedId))).filter(Boolean),
       pagination: {
         page,
         limit,

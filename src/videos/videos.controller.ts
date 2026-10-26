@@ -19,6 +19,7 @@ import { UserRole } from '../users/user-role.enum';
 import { CreateVideoDto } from './dto/create-video.dto';
 import { VideosService } from './videos.service';
 import { GetVideosQueryDto } from './dto/get-videos-query.dto';
+import { GetRelatedVideosDto } from './dto/get-related-videos.dto';
 import { UpdateVideoDto } from './dto/update-video.dto';
 
 interface AuthenticatedRequest extends Request {
@@ -107,6 +108,15 @@ export class VideosController {
   @Get(':id/watch')
   watch(@Param('id') id: string) {
     return this.videosService.watch(id);
+  }
+
+  /**
+   * Related videos to watch next: shares categories, tags or speakers with
+   * the given video. Declared before `:id` so the path is matched first.
+   */
+  @Get(':id/related')
+  findRelated(@Param('id') id: string, @Query() query: GetRelatedVideosDto) {
+    return this.videosService.findRelated(id, query);
   }
 
   @Get(':id')
