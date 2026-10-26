@@ -79,10 +79,10 @@ export class VideosService {
     const video = new this.videoModel({
       title: createVideoDto.title,
       description:
-        (createVideoDto.description || info.basic_info?.short_description) ??
+        (createVideoDto.description || info?.basic_info?.short_description) ??
         '',
       youtubeVideoId: createVideoDto.youtubeVideoId,
-      duration: info.basic_info?.duration ?? 0,
+      duration: info?.basic_info?.duration ?? 0,
       categories: categories.map((id) => new Types.ObjectId(id)),
       tags: tags.map((id) => new Types.ObjectId(id)),
       speakers: speakers.map((id) => new Types.ObjectId(id)),
