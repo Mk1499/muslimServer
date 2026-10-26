@@ -63,7 +63,7 @@ export class CategoriesService {
 
   async update(id: string, dto: UpdateCategoryDto) {
     if (!Types.ObjectId.isValid(id)) {
-      throw new BadRequestException('Invalid speaker ID');
+      throw new BadRequestException('Invalid category ID');
     }
 
     return this.categoryModel.findByIdAndUpdate(id, dto, { new: true }).exec();

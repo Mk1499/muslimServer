@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 
 import { CreateTagDto } from './dto/create-tag.dto';
+import { UpdateTagDto } from './dto/update-tag.dto';
 import { Tag, TagDocument } from './schemas/tag.schema';
 
 @Injectable()
@@ -24,7 +25,7 @@ export class TagsService {
   async findAll() {
     return this.tagModel
       .find({ isActive: true })
-      .select('name slug')
+      .select('name nameAr nameEn slug')
       .sort({ name: 1 })
       .lean()
       .exec();
@@ -41,5 +42,18 @@ export class TagsService {
     });
 
     return count === ids.length;
+  }
+
+  async update(id: string, dto: UpdateTagDto) {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid tag ID');
+    }
+
+    const update = {
+      ...dto,
+      ...(dto.slug !== undefined ? { slug: dto.slug.toLowerCase().trim() } : {}),
+    };
+
+    return this.tagModel.findByIdAndUpdate(id, update, { new: true }).exec();
   }
 }

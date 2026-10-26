@@ -14,6 +14,20 @@ export class Tag {
   name!: string;
 
   @Prop({
+    default: '',
+    trim: true,
+    maxlength: 50,
+  })
+  nameAr!: string;
+
+  @Prop({
+    default: '',
+    trim: true,
+    maxlength: 50,
+  })
+  nameEn!: string;
+
+  @Prop({
     required: true,
     trim: true,
     maxlength: 50,
