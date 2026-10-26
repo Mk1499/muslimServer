@@ -45,7 +45,12 @@ export class VideosService {
     const tags = createVideoDto.tags ?? [];
     const speakers = createVideoDto.speakers ?? [];
     const youtube = await Innertube.create();
-    let info = {};
+    let info = {
+      basic_info:{
+        duration:0,
+        short_description:""
+      }
+    };
     try {
      info = await youtube.getInfo(createVideoDto.youtubeVideoId);
     } catch(err){
