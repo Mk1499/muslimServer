@@ -49,7 +49,7 @@ export class VideosService {
     try {
      info = await youtube.getInfo(createVideoDto.youtubeVideoId);
     } catch(err){
-      console.error("Erorr while fetching video info : ", info)
+      console.error("Erorr while fetching video info : ", err)
     }
 
     const [categoriesValid, tagsValid, speakersValid] = await Promise.all([
@@ -79,10 +79,10 @@ export class VideosService {
     const video = new this.videoModel({
       title: createVideoDto.title,
       description:
-        (createVideoDto.description || info?.basic_info?.short_description) ??
+        (createVideoDto.description || (info?.basic_info && info?.basic_info?.short_description)) ??
         '',
       youtubeVideoId: createVideoDto.youtubeVideoId,
-      duration: info?.basic_info?.duration ?? 0,
+      duration:info?.basic_info ?  info?.basic_info?.duration : 0,
       categories: categories.map((id) => new Types.ObjectId(id)),
       tags: tags.map((id) => new Types.ObjectId(id)),
       speakers: speakers.map((id) => new Types.ObjectId(id)),
