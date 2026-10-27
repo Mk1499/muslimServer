@@ -12,6 +12,7 @@ import { SpeakersModule } from './speakers/speakers.module';
 import { PlaylistsModule } from './playlists/playlists.module';
 import { VideoImportsModule } from './video-imports/video-imports.module';
 import { PlaylistImportsModule } from './playlist-imports/playlist-imports.module';
+import { SearchModule } from './search/search.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { PlaylistImportsModule } from './playlist-imports/playlist-imports.modul
     PlaylistsModule,
     VideoImportsModule,
     PlaylistImportsModule,
+    SearchModule,
   ],
   controllers: [AppController],
   providers: [AppService],

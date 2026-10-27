@@ -59,6 +59,13 @@ $ yarn run test:cov
 
 ## API documentation (Swagger)
 
+`GET /api/v1/search?q=<query>&limit=10` searches the public catalog in one
+request and returns `{ query, videos, speakers }`. It searches published video
+titles, descriptions and YouTube ids, plus active speaker names and biographies;
+videos credited to a matching speaker are included too. All query words must
+match, matching is case-insensitive, and `limit` is between 1 and 20 (default
+10). The query must contain 2–100 characters.
+
 Admins can manage selected videos in batches of up to 100 using
 `PATCH /api/v1/videos/bulk/publish`, `PATCH /api/v1/videos/bulk/archive`,
 `POST /api/v1/videos/bulk/delete`, and `PATCH /api/v1/videos/bulk/metadata`.

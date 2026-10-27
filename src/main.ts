@@ -41,6 +41,7 @@ async function bootstrap() {
       'Public playlists, including imported YouTube playlists',
     )
     .addTag('Videos', 'Video catalog and admin video management')
+    .addTag('Search', 'Search published videos and active speakers')
     .addTag('Speakers', 'Speakers and their published video counts')
     .addTag('Categories', 'Video categories')
     .addTag('Tags', 'Video tags')
