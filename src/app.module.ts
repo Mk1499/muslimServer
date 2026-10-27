@@ -10,6 +10,8 @@ import { CategoriesModule } from './categories/categories.module';
 import { TagsModule } from './tags/tags.module';
 import { SpeakersModule } from './speakers/speakers.module';
 import { PlaylistsModule } from './playlists/playlists.module';
+import { VideoImportsModule } from './video-imports/video-imports.module';
+import { PlaylistImportsModule } from './playlist-imports/playlist-imports.module';
 
 @Module({
   imports: [
@@ -30,6 +32,8 @@ import { PlaylistsModule } from './playlists/playlists.module';
     TagsModule,
     SpeakersModule,
     PlaylistsModule,
+    VideoImportsModule,
+    PlaylistImportsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

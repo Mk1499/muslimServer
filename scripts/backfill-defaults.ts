@@ -27,6 +27,7 @@ const BACKFILL: Record<string, Record<string, unknown>> = {
     facebookProfileUrl: '',
     youtubeProfileUrl: '',
     views: 0,
+    publishedVideosCount: 0,
   },
   videos: {
     views: 0,

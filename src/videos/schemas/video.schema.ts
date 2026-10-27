@@ -104,6 +104,26 @@ export class Video {
     min: 0,
   })
   dislikes!: number;
+
+  @Prop({
+    type: Boolean,
+    default: false,
+  })
+  embeddable!: boolean;
+
+  @Prop({
+    type: String,
+    enum: ['none', 'live', 'upcoming'],
+    default: 'none',
+  })
+  liveBroadcastContent!: 'none' | 'live' | 'upcoming';
+
+  @Prop({
+    type: String,
+    default: '',
+    trim: true,
+  })
+  sourceChannelTitle!: string;
 }
 
 export const VideoSchema = SchemaFactory.createForClass(Video);

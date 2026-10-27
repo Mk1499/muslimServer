@@ -60,4 +60,19 @@ export class CreateVideoDto {
   @ArrayUnique()
   @IsMongoId({ each: true })
   speakers?: string[];
+
+  @IsOptional()
+  @IsBoolean()
+  embeddable?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^(none|live|upcoming)$/, {
+    message: 'liveBroadcastContent must be one of: none, live, upcoming',
+  })
+  liveBroadcastContent?: 'none' | 'live' | 'upcoming';
+
+  @IsOptional()
+  @IsString()
+  sourceChannelTitle?: string;
 }

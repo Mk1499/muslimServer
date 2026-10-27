@@ -27,6 +27,13 @@ function speakerFilter(query: GetVideosQueryDto): Record<string, unknown> {
   return { speakers: new Types.ObjectId(query.speaker) };
 }
 
+export interface YoutubeVideoReference {
+  _id: Types.ObjectId;
+  youtubeVideoId: string;
+  speakers: Types.ObjectId[];
+  status: VideoStatus;
+}
+
 @Injectable()
 export class VideosService {
   constructor(
@@ -93,10 +100,47 @@ export class VideosService {
     return video.save();
   }
 
+  /**
+   * Creates an imported video as a draft. Unlike `create`, the duration and
+   * relations are supplied by the importer, so this path does not perform the
+   * YouTube lookup used by the manual create flow. The importer validates the
+   * relations before calling this.
+   */
+  async createDraft(
+    dto: CreateVideoDto,
+    createdBy: Types.ObjectId,
+  ): Promise<VideoDocument> {
+    const video = new this.videoModel({
+      title: dto.title,
+      description: dto.description ?? '',
+      youtubeVideoId: dto.youtubeVideoId,
+      duration: dto.duration ?? 0,
+      categories: (dto.categories ?? []).map((id) => new Types.ObjectId(id)),
+      tags: (dto.tags ?? []).map((id) => new Types.ObjectId(id)),
+      speakers: (dto.speakers ?? []).map((id) => new Types.ObjectId(id)),
+      status: VideoStatus.DRAFT,
+      publishedAt: null,
+      createdBy,
+    });
+
+    return video.save();
+  }
+
   async update(id: string, dto: UpdateVideoDto) {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid video ID');
     }
+
+    const current = await this.videoModel
+      .findById(id)
+      .select('status speakers')
+      .lean()
+      .exec();
+
+    if (!current) {
+      throw new NotFoundException('Video not found');
+    }
+
     const video = await this.videoModel
       .findByIdAndUpdate(
         id,
@@ -112,12 +156,39 @@ export class VideosService {
       throw new NotFoundException('Video not found');
     }
 
+    // Changing the speakers of a published video moves their counters too.
+    if (current.status === VideoStatus.PUBLISHED && dto.speakers) {
+      const before = new Set(current.speakers.map(String));
+      const after = new Set(dto.speakers);
+
+      const added = [...after].filter((speaker) => !before.has(speaker));
+      const removed = [...before].filter((speaker) => !after.has(speaker));
+
+      if (added.length > 0) {
+        await this.speakersService.adjustPublishedVideosCount(added, 1);
+      }
+
+      if (removed.length > 0) {
+        await this.speakersService.adjustPublishedVideosCount(removed, -1);
+      }
+    }
+
     return video;
   }
 
   async publish(id: string) {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid video ID');
+    }
+
+    const current = await this.videoModel
+      .findById(id)
+      .select('status speakers')
+      .lean()
+      .exec();
+
+    if (!current) {
+      throw new NotFoundException('Video not found');
     }
 
     const video = await this.videoModel
@@ -140,12 +211,31 @@ export class VideosService {
       throw new NotFoundException('Video not found');
     }
 
+    // Only a real draft -> published transition changes the counter, so
+    // publishing an already published video never double counts.
+    if (current.status !== VideoStatus.PUBLISHED) {
+      await this.speakersService.adjustPublishedVideosCount(
+        current.speakers ?? [],
+        1,
+      );
+    }
+
     return video;
   }
 
   async archive(id: string) {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid video ID');
+    }
+
+    const current = await this.videoModel
+      .findById(id)
+      .select('status speakers')
+      .lean()
+      .exec();
+
+    if (!current) {
+      throw new NotFoundException('Video not found');
     }
 
     const video = await this.videoModel
@@ -167,6 +257,14 @@ export class VideosService {
       throw new NotFoundException('Video not found');
     }
 
+    // Archiving a draft never counted, so only a published video decrements.
+    if (current.status === VideoStatus.PUBLISHED) {
+      await this.speakersService.adjustPublishedVideosCount(
+        current.speakers ?? [],
+        -1,
+      );
+    }
+
     return video;
   }
 
@@ -181,6 +279,67 @@ export class VideosService {
     });
 
     return count === ids.length;
+  }
+
+  /** True when every id points at an existing video, whatever its status. */
+  async areExisting(ids: string[]): Promise<boolean> {
+    const unique = [...new Set(ids)];
+
+    if (unique.length === 0) {
+      return true;
+    }
+
+    const count = await this.videoModel.countDocuments({
+      _id: { $in: unique },
+    });
+
+    return count === unique.length;
+  }
+
+  /**
+   * App-side references for the given YouTube ids: the playlist importer needs
+   * their `_id` (to build the playlist), status (to leave archived videos out)
+   * and speakers (to make the playlist filterable by speaker).
+   */
+  async findReferencesByYoutubeIds(
+    youtubeVideoIds: string[],
+  ): Promise<YoutubeVideoReference[]> {
+    if (youtubeVideoIds.length === 0) {
+      return [];
+    }
+
+    const videos = await this.videoModel
+      .find({ youtubeVideoId: { $in: youtubeVideoIds } })
+      .select('youtubeVideoId speakers status')
+      .lean()
+      .exec();
+
+    return videos.map((video) => ({
+      _id: video._id,
+      youtubeVideoId: video.youtubeVideoId,
+      speakers: video.speakers ?? [],
+      status: video.status,
+    }));
+  }
+
+  /**
+   * The subset of the given YouTube ids that are already in the collection.
+   * One query for the whole batch, used by the importer to skip duplicates.
+   */
+  async findExistingYoutubeIds(
+    youtubeVideoIds: string[],
+  ): Promise<Set<string>> {
+    if (youtubeVideoIds.length === 0) {
+      return new Set();
+    }
+
+    const videos = await this.videoModel
+      .find({ youtubeVideoId: { $in: youtubeVideoIds } })
+      .select('youtubeVideoId')
+      .lean()
+      .exec();
+
+    return new Set(videos.map((video) => video.youtubeVideoId));
   }
 
   async findAll(query: GetVideosQueryDto) {
@@ -567,5 +726,31 @@ export class VideosService {
     await this.speakersService.incrementViews(video.speakers);
 
     return video;
+  }
+
+  async delete(id: string): Promise<void> {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid video ID');
+    }
+
+    // Deleting a published video removes one published video from each of its
+    // speakers, so the counter has to follow.
+    const video = await this.videoModel
+      .findById(id)
+      .select('status speakers')
+      .lean()
+      .exec();
+
+    const result = await this.videoModel.deleteOne({ _id: id }).exec();
+    if (result.deletedCount === 0) {
+      throw new NotFoundException('Video not found');
+    }
+
+    if (video?.status === VideoStatus.PUBLISHED) {
+      await this.speakersService.adjustPublishedVideosCount(
+        video.speakers ?? [],
+        -1,
+      );
+    }
   }
 }

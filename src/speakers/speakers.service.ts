@@ -33,7 +33,7 @@ export class SpeakersService {
       this.speakerModel
         .find({ isActive: true })
         .select(
-          'name nameAr nameEn bio bioAr bioEn imageUrl instagramProfileUrl tiktokProfileUrl facebookProfileUrl youtubeProfileUrl views',
+          'name nameAr nameEn bio bioAr bioEn imageUrl instagramProfileUrl tiktokProfileUrl facebookProfileUrl youtubeProfileUrl views publishedVideosCount',
         )
         .sort({ name: 1 })
         .skip((page - 1) * limit)
@@ -51,6 +51,19 @@ export class SpeakersService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+
+  /**
+   * Minimal list of active speakers used by the importer/AI matcher. It is
+   * intentionally unpaginated so id validation sees the whole catalog.
+   */
+  async findActiveOptions() {
+    return this.speakerModel
+      .find({ isActive: true })
+      .select('name nameAr nameEn')
+      .sort({ name: 1 })
+      .lean()
+      .exec();
   }
 
   async areActive(ids: string[]): Promise<boolean> {
@@ -85,6 +98,37 @@ export class SpeakersService {
   }
 
   /**
+   * Moves `publishedVideosCount` by `delta` for every given speaker. Used when
+   * a video is published (+1), archived (-1) or deleted (-1) so the speaker
+   * profile can show how many published videos they take part in.
+   *
+   * Incrementing creates the field when an older document has none, and
+   * decrementing is filtered to positive values so the counter can never go
+   * below zero.
+   */
+  async adjustPublishedVideosCount(
+    ids: (string | Types.ObjectId)[],
+    delta: 1 | -1,
+  ): Promise<void> {
+    const objectIds = ids
+      .filter((id) => Types.ObjectId.isValid(id))
+      .map((id) => new Types.ObjectId(id));
+
+    if (objectIds.length === 0) {
+      return;
+    }
+
+    const filter =
+      delta > 0
+        ? { _id: { $in: objectIds } }
+        : { _id: { $in: objectIds }, publishedVideosCount: { $gt: 0 } };
+
+    await this.speakerModel
+      .updateMany(filter, { $inc: { publishedVideosCount: delta } })
+      .exec();
+  }
+
+  /**
    * Active speakers ordered by how many views their videos got — the
    * "featured" list. Only the fields a public listing needs are returned.
    */
@@ -96,7 +140,7 @@ export class SpeakersService {
       this.speakerModel
         .find(filter)
         .select(
-          'name nameAr nameEn bio bioAr bioEn imageUrl instagramProfileUrl tiktokProfileUrl facebookProfileUrl youtubeProfileUrl views',
+          'name nameAr nameEn bio bioAr bioEn imageUrl instagramProfileUrl tiktokProfileUrl facebookProfileUrl youtubeProfileUrl views publishedVideosCount',
         )
         .sort({ views: -1, _id: -1 })
         .skip((page - 1) * limit)

@@ -51,7 +51,9 @@ export class TagsService {
 
     const update = {
       ...dto,
-      ...(dto.slug !== undefined ? { slug: dto.slug.toLowerCase().trim() } : {}),
+      ...(dto.slug !== undefined
+        ? { slug: dto.slug.toLowerCase().trim() }
+        : {}),
     };
 
     return this.tagModel.findByIdAndUpdate(id, update, { new: true }).exec();

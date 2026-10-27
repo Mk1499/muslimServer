@@ -93,6 +93,17 @@ export class Speaker {
   })
   views!: number;
 
+  /**
+   * Number of published videos this speaker is credited on. Server-controlled
+   * only — it follows the publish/archive/delete transitions of their videos.
+   */
+  @Prop({
+    type: Number,
+    default: 0,
+    min: 0,
+  })
+  publishedVideosCount!: number;
+
   @Prop({
     required: true,
     ref: 'User',

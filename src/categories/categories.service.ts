@@ -48,6 +48,19 @@ export class CategoriesService {
     };
   }
 
+  /**
+   * Minimal list of active categories used by the importer/AI matcher. It is
+   * intentionally unpaginated so id validation sees the whole catalog.
+   */
+  async findActiveOptions() {
+    return this.categoryModel
+      .find({ isActive: true })
+      .select('name nameAr nameEn')
+      .sort({ name: 1 })
+      .lean()
+      .exec();
+  }
+
   async areActive(ids: string[]): Promise<boolean> {
     if (ids.length === 0) {
       return true;

@@ -8,6 +8,7 @@ import {
   UseGuards,
   Param,
   Patch,
+  Delete,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request } from 'express';
@@ -122,5 +123,12 @@ export class VideosController {
   @Get(':id')
   findPublishedById(@Param('id') id: string) {
     return this.videosService.findPublishedById(id);
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  delete(@Param('id') id: string) {
+    return this.videosService.delete(id);
   }
 }
