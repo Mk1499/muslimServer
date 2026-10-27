@@ -1,25 +1,30 @@
-import { Transform, Type } from 'class-transformer';
+import { Type } from 'class-transformer';
 import {
   IsInt,
   IsNotEmpty,
+  IsOptional,
   IsString,
   Max,
   MaxLength,
   Min,
-  MinLength,
 } from 'class-validator';
 
 export class SearchQueryDto {
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsString()
   @IsNotEmpty()
-  @MinLength(2)
   @MaxLength(100)
-  q!: string;
+  query!: string;
 
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(20)
+  page = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(50)
   limit = 10;
 }

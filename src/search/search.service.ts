@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
+
 import { Speaker, SpeakerDocument } from '../speakers/schemas/speaker.schema';
 import {
   Video,
@@ -8,126 +9,340 @@ import {
   VideoStatus,
 } from '../videos/schemas/video.schema';
 import { SearchQueryDto } from './dto/search-query.dto';
+import { PaginationResult } from './interfaces/search-result.interface';
+
+type SearchField =
+  | 'name'
+  | 'nameAr'
+  | 'nameEn'
+  | 'bio'
+  | 'bioAr'
+  | 'bioEn'
+  | 'title'
+  | 'description'
+  | 'youtubeVideoId';
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function fieldMatch(fields: string[], tokens: string[]) {
-  return tokens.map((token) => ({
-    $or: fields.map((field) => ({ [field]: { $regex: token, $options: 'i' } })),
-  }));
+function normalizeQuery(value: string): string {
+  return value.trim().replace(/\s+/g, ' ');
 }
 
-function textScore(
-  fields: (string | null | undefined)[],
-  query: string,
-  tokens: string[],
-) {
-  const values = fields
-    .filter((value): value is string => !!value)
-    .map((value) => value.toLocaleLowerCase());
-  const normalizedQuery = query.toLocaleLowerCase();
-  let score = values.some((value) => value === normalizedQuery) ? 100 : 0;
-  if (values.some((value) => value.startsWith(normalizedQuery))) score += 30;
-  for (const token of tokens) {
-    if (values.some((value) => value.includes(token))) score += 5;
-  }
-  return score;
+function buildFieldMatch(fields: SearchField[], tokens: string[]) {
+  return {
+    $and: tokens.map((token) => ({
+      $or: fields.map((field) => ({
+        [field]: {
+          $regex: escapeRegex(token),
+          $options: 'i',
+        },
+      })),
+    })),
+  };
+}
+
+function buildScoreExpression(fields: SearchField[], query: string) {
+  const escapedQuery = escapeRegex(query);
+  const normalizedQuery = query.toLowerCase();
+
+  return {
+    $add: fields.flatMap((field) => [
+      {
+        $cond: [
+          {
+            $eq: [
+              {
+                $toLower: {
+                  $ifNull: [`$${field}`, ''],
+                },
+              },
+              normalizedQuery,
+            ],
+          },
+          100,
+          0,
+        ],
+      },
+      {
+        $cond: [
+          {
+            $regexMatch: {
+              input: {
+                $ifNull: [`$${field}`, ''],
+              },
+              regex: `^${escapedQuery}`,
+              options: 'i',
+            },
+          },
+          30,
+          0,
+        ],
+      },
+      {
+        $cond: [
+          {
+            $regexMatch: {
+              input: {
+                $ifNull: [`$${field}`, ''],
+              },
+              regex: escapedQuery,
+              options: 'i',
+            },
+          },
+          5,
+          0,
+        ],
+      },
+    ]),
+  };
+}
+
+function emptyPagination<T>(page: number, limit: number): PaginationResult<T> {
+  return {
+    data: [],
+    pagination: {
+      page,
+      limit,
+      total: 0,
+      totalPages: 0,
+    },
+  };
 }
 
 @Injectable()
 export class SearchService {
   constructor(
-    @InjectModel(Video.name) private readonly videoModel: Model<VideoDocument>,
+    @InjectModel(Video.name)
+    private readonly videoModel: Model<VideoDocument>,
     @InjectModel(Speaker.name)
     private readonly speakerModel: Model<SpeakerDocument>,
   ) {}
 
   async search(queryDto: SearchQueryDto) {
-    const query = queryDto.q.trim().replace(/\s+/g, ' ');
-    const rawTokens = query.split(' ');
-    const tokens = rawTokens.map(escapeRegex);
-    const limit = queryDto.limit ?? 10;
+    const query = normalizeQuery(queryDto.query ?? '');
 
-    const speakers = await this.speakerModel
-      .find({
-        isActive: true,
-        $and: fieldMatch(
-          ['name', 'nameAr', 'nameEn', 'bio', 'bioAr', 'bioEn'],
-          tokens,
-        ),
-      })
-      .select(
-        'name nameAr nameEn bio bioAr bioEn imageUrl views publishedVideosCount',
-      )
-      .limit(100)
-      .lean()
-      .exec();
+    const page = Math.max(1, queryDto.page ?? 1);
+    const limit = Math.min(50, Math.max(1, queryDto.limit ?? 10));
 
-    const videoFields = ['title', 'description', 'youtubeVideoId'];
-    const videoTextMatch = { $and: fieldMatch(videoFields, tokens) };
-    const matchingSpeakerIds = speakers.map(
-      (speaker) => speaker._id as Types.ObjectId,
-    );
-    const videoConditions: Record<string, unknown>[] = [videoTextMatch];
-    if (matchingSpeakerIds.length > 0) {
-      videoConditions.push({ speakers: { $in: matchingSpeakerIds } });
+    if (!query) {
+      return {
+        query,
+        ...emptyPagination(page, limit),
+      };
     }
 
-    const candidates = await this.videoModel
-      .find({ status: VideoStatus.PUBLISHED, $or: videoConditions })
-      .select(
-        'title description youtubeVideoId publishedAt views duration isFeatured speakers',
-      )
-      .populate({ path: 'speakers', select: 'name nameAr nameEn imageUrl' })
-      .sort({ publishedAt: -1, _id: -1 })
-      .limit(100)
-      .lean()
+    const tokens = query.split(' ');
+
+    const [videos, speakers] = await Promise.all([
+      this.executeVideoSearch(query, tokens, page, limit),
+      this.executeSpeakerSearch(query, tokens, page, limit),
+    ]);
+
+    return {
+      query,
+      videos,
+      speakers,
+    };
+  }
+
+  async searchVideos(queryDto: SearchQueryDto) {
+    const query = normalizeQuery(queryDto.query ?? '');
+    const page = Math.max(1, queryDto.page ?? 1);
+    const limit = Math.min(50, Math.max(1, queryDto.limit ?? 10));
+
+    if (!query) {
+      return emptyPagination(page, limit);
+    }
+
+    return this.executeVideoSearch(query, query.split(' '), page, limit);
+  }
+
+  async searchSpeakers(queryDto: SearchQueryDto) {
+    const query = normalizeQuery(queryDto.query ?? '');
+    const page = Math.max(1, queryDto.page ?? 1);
+    const limit = Math.min(50, Math.max(1, queryDto.limit ?? 10));
+
+    if (!query) {
+      return emptyPagination(page, limit);
+    }
+
+    return this.executeSpeakerSearch(query, query.split(' '), page, limit);
+  }
+
+  private async executeVideoSearch(
+    query: string,
+    tokens: string[],
+    page: number,
+    limit: number,
+  ): Promise<PaginationResult<Record<string, unknown>>> {
+    const videoFields: SearchField[] = [
+      'title',
+      'description',
+      'youtubeVideoId',
+    ];
+
+    const pipeline = [
+      {
+        $match: {
+          status: VideoStatus.PUBLISHED,
+          ...buildFieldMatch(videoFields, tokens),
+        },
+      },
+      {
+        $addFields: {
+          searchScore: buildScoreExpression(videoFields, query),
+        },
+      },
+      {
+        $sort: {
+          searchScore: -1 as const,
+          publishedAt: -1 as const,
+          _id: -1 as const,
+        },
+      },
+      {
+        $facet: {
+          data: [
+            { $skip: (page - 1) * limit },
+            { $limit: limit },
+            {
+              $project: {
+                title: 1,
+                description: 1,
+                youtubeVideoId: 1,
+                publishedAt: 1,
+                views: 1,
+                duration: 1,
+                isFeatured: 1,
+                speakers: 1,
+              },
+            },
+            {
+              $lookup: {
+                from: this.speakerModel.collection.name,
+                localField: 'speakers',
+                foreignField: '_id',
+                pipeline: [
+                  { $match: { isActive: true } },
+                  {
+                    $project: {
+                      name: 1,
+                      nameAr: 1,
+                      nameEn: 1,
+                      imageUrl: 1,
+                    },
+                  },
+                ],
+                as: 'speakers',
+              },
+            },
+          ],
+          metadata: [{ $count: 'total' }],
+        },
+      },
+    ];
+
+    const [result] = await this.videoModel
+      .aggregate<{
+        data: Record<string, unknown>[];
+        metadata: { total: number }[];
+      }>(pipeline)
       .exec();
 
-    const rankedVideos = candidates
-      .map((video) => {
-        const speakerNames = (video.speakers ?? []).flatMap((speaker: any) => [
-          speaker.name,
-          speaker.nameAr,
-          speaker.nameEn,
-        ]);
-        const score = textScore(
-          [
-            video.title,
-            video.description,
-            video.youtubeVideoId,
-            ...speakerNames,
-          ],
-          query,
-          rawTokens,
-        );
-        return { video, score };
-      })
-      .sort((a, b) => b.score - a.score)
-      .slice(0, limit)
-      .map(({ video }) => video);
+    const data = result?.data ?? [];
+    const total = result?.metadata[0]?.total ?? 0;
 
-    const rankedSpeakers = speakers
-      .map((speaker) => ({
-        speaker,
-        score: textScore(
-          [
-            speaker.name,
-            speaker.nameAr,
-            speaker.nameEn,
-            speaker.bio,
-            speaker.bioAr,
-            speaker.bioEn,
-          ],
-          query,
-          rawTokens,
-        ),
-      }))
-      .sort((a, b) => b.score - a.score)
-      .map(({ speaker }) => speaker);
+    return {
+      data,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
 
-    return { query, videos: rankedVideos, speakers: rankedSpeakers };
+  private async executeSpeakerSearch(
+    query: string,
+    tokens: string[],
+    page: number,
+    limit: number,
+  ): Promise<PaginationResult<Record<string, unknown>>> {
+    const speakerFields: SearchField[] = [
+      'name',
+      'nameAr',
+      'nameEn',
+      'bio',
+      'bioAr',
+      'bioEn',
+    ];
+
+    const pipeline = [
+      {
+        $match: {
+          isActive: true,
+          ...buildFieldMatch(speakerFields, tokens),
+        },
+      },
+      {
+        $addFields: {
+          searchScore: buildScoreExpression(
+            ['name', 'nameAr', 'nameEn'],
+            query,
+          ),
+        },
+      },
+      {
+        $sort: {
+          searchScore: -1 as const,
+          _id: 1 as const,
+        },
+      },
+      {
+        $facet: {
+          data: [
+            { $skip: (page - 1) * limit },
+            { $limit: limit },
+            {
+              $project: {
+                name: 1,
+                nameAr: 1,
+                nameEn: 1,
+                bio: 1,
+                bioAr: 1,
+                bioEn: 1,
+                imageUrl: 1,
+                views: 1,
+                publishedVideosCount: 1,
+              },
+            },
+          ],
+          metadata: [{ $count: 'total' }],
+        },
+      },
+    ];
+
+    const [result] = await this.speakerModel
+      .aggregate<{
+        data: Record<string, unknown>[];
+        metadata: { total: number }[];
+      }>(pipeline)
+      .exec();
+
+    const data = result?.data ?? [];
+    const total = result?.metadata[0]?.total ?? 0;
+
+    return {
+      data,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
 }
