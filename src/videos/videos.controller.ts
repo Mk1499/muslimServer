@@ -23,6 +23,8 @@ import { VideosService } from './videos.service';
 import { GetVideosQueryDto } from './dto/get-videos-query.dto';
 import { GetRelatedVideosDto } from './dto/get-related-videos.dto';
 import { UpdateVideoDto } from './dto/update-video.dto';
+import { BulkVideoIdsDto } from './dto/bulk-video-ids.dto';
+import { BulkVideoMetadataDto } from './dto/bulk-video-metadata.dto';
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -42,6 +44,34 @@ export class VideosController {
   @Roles(UserRole.ADMIN)
   create(@Body() dto: CreateVideoDto, @Req() req: AuthenticatedRequest) {
     return this.videosService.create(dto, new Types.ObjectId(req.user.id));
+  }
+
+  @Patch('bulk/publish')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  publishMany(@Body() dto: BulkVideoIdsDto) {
+    return this.videosService.publishMany(dto.ids);
+  }
+
+  @Patch('bulk/archive')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  archiveMany(@Body() dto: BulkVideoIdsDto) {
+    return this.videosService.archiveMany(dto.ids);
+  }
+
+  @Post('bulk/delete')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  deleteMany(@Body() dto: BulkVideoIdsDto) {
+    return this.videosService.deleteMany(dto.ids);
+  }
+
+  @Patch('bulk/metadata')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  addMetadataMany(@Body() dto: BulkVideoMetadataDto) {
+    return this.videosService.addMetadataMany(dto);
   }
 
   @Patch(':id/publish')

@@ -59,6 +59,14 @@ $ yarn run test:cov
 
 ## API documentation (Swagger)
 
+Admins can manage selected videos in batches of up to 100 using
+`PATCH /api/v1/videos/bulk/publish`, `PATCH /api/v1/videos/bulk/archive`,
+`POST /api/v1/videos/bulk/delete`, and `PATCH /api/v1/videos/bulk/metadata`.
+Each request accepts an `ids` array; metadata requests also accept `categories`
+and `tags` arrays, which are added to existing metadata. Bulk operations reject
+the request if any selected video is missing. Speaker published-video counters
+are maintained during bulk publish, archive, and delete operations.
+
 Start the server, then open:
 
 - Swagger UI: `http://localhost:3007/api/docs`

@@ -310,6 +310,114 @@ export class VideosService {
       .exec();
   }
 
+  private async requireVideos(ids: string[]) {
+    const videos = await this.videoModel
+      .find({ _id: { $in: ids } })
+      .select('_id status speakers')
+      .lean()
+      .exec();
+    if (videos.length !== ids.length) {
+      throw new NotFoundException('One or more videos were not found');
+    }
+    return videos;
+  }
+
+  private async adjustSpeakerCounts(
+    videos: { speakers?: Types.ObjectId[] }[],
+    delta: 1 | -1,
+  ) {
+    const counts = new Map<string, number>();
+    for (const video of videos) {
+      for (const speakerId of video.speakers ?? []) {
+        const id = String(speakerId);
+        counts.set(id, (counts.get(id) ?? 0) + 1);
+      }
+    }
+    await Promise.all(
+      [...counts].map(([id, count]) =>
+        Promise.all(
+          Array.from({ length: count }, () =>
+            this.speakersService.adjustPublishedVideosCount([id], delta),
+          ),
+        ),
+      ),
+    );
+  }
+
+  async publishMany(ids: string[]) {
+    const videos = await this.requireVideos(ids);
+    const toPublish = videos.filter(
+      (video) => video.status !== VideoStatus.PUBLISHED,
+    );
+    if (toPublish.length > 0) {
+      const publishIds = toPublish.map((video) => video._id);
+      await this.videoModel
+        .updateMany(
+          { _id: { $in: publishIds } },
+          { $set: { status: VideoStatus.PUBLISHED, publishedAt: new Date() } },
+        )
+        .exec();
+      await this.adjustSpeakerCounts(toPublish, 1);
+    }
+    return { affected: ids.length };
+  }
+
+  async archiveMany(ids: string[]) {
+    const videos = await this.requireVideos(ids);
+    const toUnpublish = videos.filter(
+      (video) => video.status === VideoStatus.PUBLISHED,
+    );
+    await this.videoModel
+      .updateMany(
+        { _id: { $in: ids } },
+        { $set: { status: VideoStatus.ARCHIVED } },
+      )
+      .exec();
+    await this.adjustSpeakerCounts(toUnpublish, -1);
+    return { affected: ids.length };
+  }
+
+  async deleteMany(ids: string[]) {
+    const videos = await this.requireVideos(ids);
+    const published = videos.filter(
+      (video) => video.status === VideoStatus.PUBLISHED,
+    );
+    const result = await this.videoModel
+      .deleteMany({ _id: { $in: ids } })
+      .exec();
+    await this.adjustSpeakerCounts(published, -1);
+    return { affected: result.deletedCount ?? 0 };
+  }
+
+  async addMetadataMany(dto: {
+    ids: string[];
+    categories?: string[];
+    tags?: string[];
+  }) {
+    await this.requireVideos(dto.ids);
+    const categories = dto.categories ?? [];
+    const tags = dto.tags ?? [];
+    const [categoriesValid, tagsValid] = await Promise.all([
+      this.categoriesService.areActive(categories),
+      this.tagsService.areActive(tags),
+    ]);
+    if (!categoriesValid) {
+      throw new BadRequestException(
+        'One or more categories do not exist or are inactive',
+      );
+    }
+    if (!tagsValid) {
+      throw new BadRequestException(
+        'One or more tags do not exist or are inactive',
+      );
+    }
+    if (categories.length === 0 && tags.length === 0) {
+      throw new BadRequestException('Select at least one category or tag');
+    }
+    await this.addMetadata(dto.ids, { categories, tags });
+    return { affected: dto.ids.length };
+  }
+
   async arePublished(ids: string[]): Promise<boolean> {
     if (ids.length === 0) {
       return true;
