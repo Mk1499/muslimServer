@@ -40,6 +40,20 @@ export class Playlist {
   })
   speakers!: Types.ObjectId[];
 
+  /** Categories shared by the playlist and inherited by its videos. */
+  @Prop({
+    type: [{ type: Types.ObjectId, ref: 'Category' }],
+    default: [],
+  })
+  categories!: Types.ObjectId[];
+
+  /** Tags shared by the playlist and inherited by its videos. */
+  @Prop({
+    type: [{ type: Types.ObjectId, ref: 'Tag' }],
+    default: [],
+  })
+  tags!: Types.ObjectId[];
+
   @Prop({
     default: true,
   })

@@ -56,6 +56,10 @@ export interface PlaylistImportSummary {
   /** False when the YouTube playlist had already been imported. */
   created: boolean;
   speakers: string[];
+  /** Categories stored on the playlist and inherited by its videos. */
+  categories: string[];
+  /** Tags stored on the playlist and inherited by its videos. */
+  tags: string[];
   maxVideos: number;
   shortsMaxDurationSeconds: number;
   aiEnabled: boolean;
@@ -85,6 +89,10 @@ interface PreparedRun {
   playlistId: string;
   maxVideos: number;
   speakers: string[];
+  /** Undefined means "not provided", so a re-import keeps stored metadata. */
+  categories?: string[];
+  /** Undefined means "not provided", so a re-import keeps stored metadata. */
+  tags?: string[];
   title?: string;
   description?: string;
   warnings: ImportIssue[];
@@ -155,6 +163,9 @@ export class PlaylistImportsService {
 
     const maxVideos = clamp(dto.maxVideos ?? DEFAULT_MAX_VIDEOS, 1, MAX_VIDEOS);
     const speakers = uniqueStrings(dto.speakers ?? []);
+    const categories =
+      dto.categories === undefined ? undefined : uniqueStrings(dto.categories);
+    const tags = dto.tags === undefined ? undefined : uniqueStrings(dto.tags);
 
     if (speakers.length > 5) {
       throw new BadRequestException('Too many speakers (max 5 per import)');
@@ -164,11 +175,21 @@ export class PlaylistImportsService {
       throw new BadRequestException('One or more speaker ids are invalid');
     }
 
+    if (categories?.some((id) => !Types.ObjectId.isValid(id))) {
+      throw new BadRequestException('One or more category ids are invalid');
+    }
+
+    if (tags?.some((id) => !Types.ObjectId.isValid(id))) {
+      throw new BadRequestException('One or more tag ids are invalid');
+    }
+
     return {
       createdBy: new Types.ObjectId(createdBy),
       playlistId,
       maxVideos,
       speakers,
+      categories,
+      tags,
       title: dto.title?.trim() || undefined,
       description: dto.description,
       warnings: [],
@@ -201,6 +222,8 @@ export class PlaylistImportsService {
     startedAt: number,
   ): Promise<PlaylistImportSummary> {
     const { createdBy, playlistId, maxVideos, speakers } = prepared;
+    const playlistCategories = prepared.categories ?? [];
+    const playlistTags = prepared.tags ?? [];
     const shortsMaxDurationSeconds = getShortsMaxDurationSeconds(this.config);
     const aiEnabled = this.ai.isConfigured();
 
@@ -211,6 +234,8 @@ export class PlaylistImportsService {
       title: '',
       created: false,
       speakers: [...speakers],
+      categories: [...playlistCategories],
+      tags: [...playlistTags],
       maxVideos,
       shortsMaxDurationSeconds,
       aiEnabled,
@@ -240,14 +265,29 @@ export class PlaylistImportsService {
       return summary;
     };
 
-    // The explicit playlist speakers are used on every new video, so they must
-    // be valid before anything is written.
-    if (
-      speakers.length > 0 &&
-      !(await this.speakersService.areActive(speakers))
-    ) {
+    // The explicit playlist speakers/categories/tags are used on every video,
+    // so they must be valid before anything is written.
+    const [speakersValid, categoriesValid, tagsValid] = await Promise.all([
+      this.speakersService.areActive(speakers),
+      this.categoriesService.areActive(playlistCategories),
+      this.tagsService.areActive(playlistTags),
+    ]);
+
+    if (!speakersValid) {
       throw new BadRequestException(
         'One or more speakers do not exist or are inactive',
+      );
+    }
+
+    if (!categoriesValid) {
+      throw new BadRequestException(
+        'One or more categories do not exist or are inactive',
+      );
+    }
+
+    if (!tagsValid) {
+      throw new BadRequestException(
+        'One or more tags do not exist or are inactive',
       );
     }
 
@@ -438,6 +478,8 @@ export class PlaylistImportsService {
         ),
         videos: usable.map((reference) => String(reference._id)),
         speakers: [...playlistSpeakers],
+        categories: prepared.categories,
+        tags: prepared.tags,
       },
       createdBy,
     );
@@ -446,6 +488,10 @@ export class PlaylistImportsService {
     summary.created = created;
     summary.playlistVideos = usable.length;
     summary.speakers = [...playlistSpeakers];
+    // Reflect what is stored, which for a re-import without explicit
+    // categories/tags is the metadata the playlist already had.
+    summary.categories = (playlist.categories ?? []).map(String);
+    summary.tags = (playlist.tags ?? []).map(String);
 
     if (usable.length === 0) {
       addIssue(summary.warnings, {

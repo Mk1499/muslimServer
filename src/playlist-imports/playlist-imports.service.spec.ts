@@ -84,17 +84,27 @@ interface VideosMock {
 
 interface PlaylistsMock {
   upsertImported: jest.Mock<
-    Promise<{ playlist: { _id: Types.ObjectId }; created: boolean }>,
+    Promise<{
+      playlist: {
+        _id: Types.ObjectId;
+        videos?: Types.ObjectId[];
+        categories?: Types.ObjectId[];
+        tags?: Types.ObjectId[];
+      };
+      created: boolean;
+    }>,
     [ImportedPlaylistInput, Types.ObjectId]
   >;
 }
 
 interface CategoriesMock {
   findActiveOptions: jest.Mock<Promise<CatalogRow[]>, []>;
+  areActive: jest.Mock<Promise<boolean>, [string[]]>;
 }
 
 interface TagsMock {
   findAll: jest.Mock<Promise<CatalogRow[]>, []>;
+  areActive: jest.Mock<Promise<boolean>, [string[]]>;
 }
 
 interface SpeakersMock {
@@ -206,9 +216,11 @@ function createService() {
     findActiveOptions: jest
       .fn<Promise<CatalogRow[]>, []>()
       .mockResolvedValue([]),
+    areActive: jest.fn<Promise<boolean>, [string[]]>().mockResolvedValue(true),
   };
   const tags: TagsMock = {
     findAll: jest.fn<Promise<CatalogRow[]>, []>().mockResolvedValue([]),
+    areActive: jest.fn<Promise<boolean>, [string[]]>().mockResolvedValue(true),
   };
   const speakers: SpeakersMock = {
     findActiveOptions: jest
@@ -272,6 +284,37 @@ describe('PlaylistImportsService', () => {
       String(APP_IDS.bbbbbbbbbbb),
     ]);
     expect(playlistInput.speakers).toEqual([SPEAKER_ID]);
+  });
+
+  it('stores playlist categories/tags and passes them to the import', async () => {
+    const { service, playlists, categories, tags } = createService();
+    const playlistCategory = new Types.ObjectId(CATEGORY_ID);
+    const playlistTag = new Types.ObjectId(TAG_ID);
+
+    playlists.upsertImported.mockResolvedValue({
+      playlist: {
+        _id: new Types.ObjectId(),
+        videos: [],
+        categories: [playlistCategory],
+        tags: [playlistTag],
+      },
+      created: true,
+    });
+
+    const summary = await service.run(ADMIN_ID, {
+      playlist: PLAYLIST_ID,
+      categories: [CATEGORY_ID],
+      tags: [TAG_ID],
+    });
+
+    expect(categories.areActive).toHaveBeenCalledWith([CATEGORY_ID]);
+    expect(tags.areActive).toHaveBeenCalledWith([TAG_ID]);
+
+    const [playlistInput] = playlists.upsertImported.mock.calls[0];
+    expect(playlistInput.categories).toEqual([CATEGORY_ID]);
+    expect(playlistInput.tags).toEqual([TAG_ID]);
+    expect(summary.categories).toEqual([CATEGORY_ID]);
+    expect(summary.tags).toEqual([TAG_ID]);
   });
 
   it('adds existing videos to the playlist without creating them again', async () => {

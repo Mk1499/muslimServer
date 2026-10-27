@@ -10,6 +10,7 @@ import {
   Patch,
   Delete,
 } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request } from 'express';
 import { Types } from 'mongoose';
@@ -31,6 +32,7 @@ interface AuthenticatedRequest extends Request {
   };
 }
 
+@ApiTags('Videos')
 @Controller('videos')
 export class VideosController {
   constructor(private readonly videosService: VideosService) {}

@@ -10,7 +10,9 @@ import { CreatePlaylistDto } from './dto/create-playlist.dto';
 import { GetPlaylistsDto } from './dto/get-playlists.dto';
 import { UpdatePlaylistDto } from './dto/update-playlist.dto';
 import { Playlist, PlaylistDocument } from './schemas/playlist.schema';
+import { CategoriesService } from 'src/categories/categories.service';
 import { SpeakersService } from 'src/speakers/speakers.service';
+import { TagsService } from 'src/tags/tags.service';
 import { VideosService } from 'src/videos/videos.service';
 
 export interface ImportedPlaylistInput {
@@ -19,6 +21,10 @@ export interface ImportedPlaylistInput {
   description: string;
   videos: string[];
   speakers: string[];
+  /** When omitted on a re-import, the stored playlist categories are kept. */
+  categories?: string[];
+  /** When omitted on a re-import, the stored playlist tags are kept. */
+  tags?: string[];
 }
 
 /**
@@ -39,6 +45,8 @@ export class PlaylistsService {
     private readonly playlistModel: Model<PlaylistDocument>,
     private readonly videosService: VideosService,
     private readonly speakersService: SpeakersService,
+    private readonly categoriesService: CategoriesService,
+    private readonly tagsService: TagsService,
   ) {}
 
   async create(
@@ -47,18 +55,31 @@ export class PlaylistsService {
   ): Promise<PlaylistDocument> {
     const videos = dto.videos ?? [];
     const speakers = dto.speakers ?? [];
+    const categories = dto.categories ?? [];
+    const tags = dto.tags ?? [];
 
-    await this.assertMembersExist(videos, speakers);
+    await Promise.all([
+      this.assertMembersExist(videos, speakers),
+      this.assertMetadataExist(categories, tags),
+    ]);
 
     const playlist = new this.playlistModel({
       title: dto.title,
       description: dto.description,
       videos: videos.map((id) => new Types.ObjectId(id)),
       speakers: speakers.map((id) => new Types.ObjectId(id)),
+      categories: categories.map((id) => new Types.ObjectId(id)),
+      tags: tags.map((id) => new Types.ObjectId(id)),
       createdBy,
     });
 
-    return playlist.save();
+    const saved = await playlist.save();
+
+    // The playlist defines categories/tags for its videos; merge them in
+    // without dropping metadata a video already has.
+    await this.inheritMetadata(saved.videos, saved.categories, saved.tags);
+
+    return saved;
   }
 
   /**
@@ -75,10 +96,23 @@ export class PlaylistsService {
   ): Promise<{ playlist: PlaylistDocument; created: boolean }> {
     const videos = [...new Set(input.videos)];
     const speakers = [...new Set(input.speakers)];
+    const categories = [...new Set(input.categories ?? [])];
+    const tags = [...new Set(input.tags ?? [])];
 
-    await this.assertImportedMembersExist(videos, speakers);
+    await Promise.all([
+      this.assertImportedMembersExist(videos, speakers),
+      this.assertMetadataExist(categories, tags),
+    ]);
 
-    const fields = {
+    const fields: {
+      youtubePlaylistId: string;
+      title: string;
+      description: string;
+      videos: Types.ObjectId[];
+      speakers: Types.ObjectId[];
+      categories?: Types.ObjectId[];
+      tags?: Types.ObjectId[];
+    } = {
       youtubePlaylistId: input.youtubePlaylistId,
       title: input.title,
       description: input.description,
@@ -86,49 +120,66 @@ export class PlaylistsService {
       speakers: speakers.map((id) => new Types.ObjectId(id)),
     };
 
+    // Omitting these on a re-import keeps whatever the playlist already had.
+    if (input.categories !== undefined) {
+      fields.categories = categories.map((id) => new Types.ObjectId(id));
+    }
+
+    if (input.tags !== undefined) {
+      fields.tags = tags.map((id) => new Types.ObjectId(id));
+    }
+
     const existing = await this.playlistModel
       .findOne({ youtubePlaylistId: input.youtubePlaylistId })
       .select('_id')
       .lean()
       .exec();
 
+    let playlist: PlaylistDocument;
+    let created = false;
+
     if (existing) {
-      return {
-        playlist: await this.updateImported(existing._id, fields),
-        created: false,
-      };
+      playlist = await this.updateImported(existing._id, fields);
+    } else {
+      const pending = new this.playlistModel({
+        ...fields,
+        isActive: true,
+        createdBy,
+      });
+
+      try {
+        playlist = await pending.save();
+        created = true;
+      } catch (error) {
+        // Another request may have created it between the lookup and the save;
+        // the unique index wins and this request updates the winner.
+        if (!isDuplicateKeyError(error)) {
+          throw error;
+        }
+
+        const winner = await this.playlistModel
+          .findOne({ youtubePlaylistId: input.youtubePlaylistId })
+          .select('_id')
+          .lean()
+          .exec();
+
+        if (!winner) {
+          throw error;
+        }
+
+        playlist = await this.updateImported(winner._id, fields);
+      }
     }
 
-    const playlist = new this.playlistModel({
-      ...fields,
-      isActive: true,
-      createdBy,
-    });
+    // Playlist categories/tags are inherited by every video in it, including
+    // videos that already existed before this import.
+    await this.inheritMetadata(
+      playlist.videos,
+      playlist.categories,
+      playlist.tags,
+    );
 
-    try {
-      return { playlist: await playlist.save(), created: true };
-    } catch (error) {
-      // Another request may have created it between the lookup and the save;
-      // the unique index wins and this request updates the winner.
-      if (!isDuplicateKeyError(error)) {
-        throw error;
-      }
-
-      const winner = await this.playlistModel
-        .findOne({ youtubePlaylistId: input.youtubePlaylistId })
-        .select('_id')
-        .lean()
-        .exec();
-
-      if (!winner) {
-        throw error;
-      }
-
-      return {
-        playlist: await this.updateImported(winner._id, fields),
-        created: false,
-      };
-    }
+    return { playlist, created };
   }
 
   private async updateImported(
@@ -139,6 +190,8 @@ export class PlaylistsService {
       description: string;
       videos: Types.ObjectId[];
       speakers: Types.ObjectId[];
+      categories?: Types.ObjectId[];
+      tags?: Types.ObjectId[];
     },
   ): Promise<PlaylistDocument> {
     const playlist = await this.playlistModel
@@ -167,7 +220,7 @@ export class PlaylistsService {
       this.playlistModel
         .find(filter)
         .select(
-          'title description videos speakers youtubePlaylistId createdAt updatedAt',
+          'title description videos speakers categories tags youtubePlaylistId createdAt updatedAt',
         )
         .sort({ createdAt: -1, _id: -1 })
         .skip((page - 1) * limit)
@@ -177,8 +230,14 @@ export class PlaylistsService {
       this.playlistModel.countDocuments(filter).exec(),
     ]);
 
-    return {
-      data: playlists,
+    const response = {
+      data: playlists.map((playlist) => ({
+        ...playlist,
+        // Documents created before playlists had metadata do not store these
+        // keys; normalize so every playlist has the same shape.
+        categories: playlist.categories ?? [],
+        tags: playlist.tags ?? [],
+      })),
       pagination: {
         page,
         limit,
@@ -186,6 +245,8 @@ export class PlaylistsService {
         totalPages: Math.ceil(total / limit),
       },
     };
+
+    return response;
   }
 
   async findOne(id: string): Promise<PlaylistDocument> {
@@ -196,7 +257,7 @@ export class PlaylistsService {
     const playlist = await this.playlistModel
       .findById(id)
       .select(
-        'title description videos speakers youtubePlaylistId isActive createdAt updatedAt',
+        'title description videos speakers categories tags youtubePlaylistId isActive createdAt updatedAt',
       )
       .lean()
       .exec();
@@ -204,6 +265,11 @@ export class PlaylistsService {
     if (!playlist) {
       throw new NotFoundException('Playlist not found');
     }
+
+    // Documents created before playlists had metadata do not store these
+    // keys; normalize so one playlist always has the same shape.
+    playlist.categories = playlist.categories ?? [];
+    playlist.tags = playlist.tags ?? [];
 
     return playlist;
   }
@@ -213,9 +279,14 @@ export class PlaylistsService {
       throw new BadRequestException('Invalid playlist ID');
     }
 
-    if (dto.videos || dto.speakers) {
-      await this.assertMembersExist(dto.videos ?? [], dto.speakers ?? []);
-    }
+    await Promise.all([
+      dto.videos || dto.speakers
+        ? this.assertMembersExist(dto.videos ?? [], dto.speakers ?? [])
+        : Promise.resolve(),
+      dto.categories || dto.tags
+        ? this.assertMetadataExist(dto.categories ?? [], dto.tags ?? [])
+        : Promise.resolve(),
+    ]);
 
     const playlist = await this.playlistModel
       .findByIdAndUpdate(
@@ -231,6 +302,14 @@ export class PlaylistsService {
     if (!playlist) {
       throw new NotFoundException('Playlist not found');
     }
+
+    // Covers both edited categories/tags and videos added to the playlist:
+    // every child video inherits the playlist metadata.
+    await this.inheritMetadata(
+      playlist.videos,
+      playlist.categories,
+      playlist.tags,
+    );
 
     return playlist;
   }
@@ -269,6 +348,56 @@ export class PlaylistsService {
     }
 
     return playlist;
+  }
+
+  /**
+   * Copies the playlist categories/tags onto its videos. Merge-only: metadata
+   * a video already has is never removed, so removing an item from a playlist
+   * does not rewrite videos that were once part of it.
+   */
+  private async inheritMetadata(
+    videos: Types.ObjectId[] | undefined,
+    categories: Types.ObjectId[] | undefined,
+    tags: Types.ObjectId[] | undefined,
+  ): Promise<void> {
+    const videoIds = (videos ?? []).map(String);
+    const categoryIds = (categories ?? []).map(String);
+    const tagIds = (tags ?? []).map(String);
+
+    if (
+      videoIds.length === 0 ||
+      (categoryIds.length === 0 && tagIds.length === 0)
+    ) {
+      return;
+    }
+
+    await this.videosService.addMetadata(videoIds, {
+      categories: categoryIds,
+      tags: tagIds,
+    });
+  }
+
+  /** Playlist categories/tags must exist and be active, like video metadata. */
+  private async assertMetadataExist(
+    categories: string[],
+    tags: string[],
+  ): Promise<void> {
+    const [categoriesValid, tagsValid] = await Promise.all([
+      this.categoriesService.areActive(categories),
+      this.tagsService.areActive(tags),
+    ]);
+
+    if (!categoriesValid) {
+      throw new BadRequestException(
+        'One or more categories do not exist or are inactive',
+      );
+    }
+
+    if (!tagsValid) {
+      throw new BadRequestException(
+        'One or more tags do not exist or are inactive',
+      );
+    }
   }
 
   /**

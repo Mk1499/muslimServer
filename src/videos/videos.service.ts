@@ -268,6 +268,48 @@ export class VideosService {
     return video;
   }
 
+  /**
+   * Adds categories/tags to several videos without removing metadata they
+   * already have. Playlists use this so their categories and tags inherit down
+   * to their videos.
+   */
+  async addMetadata(
+    ids: string[],
+    metadata: { categories?: string[]; tags?: string[] },
+  ): Promise<void> {
+    const unique = [...new Set(ids)];
+
+    if (unique.length === 0) {
+      return;
+    }
+
+    const addToSet: {
+      categories?: { $each: Types.ObjectId[] };
+      tags?: { $each: Types.ObjectId[] };
+    } = {};
+
+    const categories = [...new Set(metadata.categories ?? [])];
+    const tags = [...new Set(metadata.tags ?? [])];
+
+    if (categories.length > 0) {
+      addToSet.categories = {
+        $each: categories.map((id) => new Types.ObjectId(id)),
+      };
+    }
+
+    if (tags.length > 0) {
+      addToSet.tags = { $each: tags.map((id) => new Types.ObjectId(id)) };
+    }
+
+    if (Object.keys(addToSet).length === 0) {
+      return;
+    }
+
+    await this.videoModel
+      .updateMany({ _id: { $in: unique } }, { $addToSet: addToSet })
+      .exec();
+  }
+
   async arePublished(ids: string[]): Promise<boolean> {
     if (ids.length === 0) {
       return true;

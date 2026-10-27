@@ -57,6 +57,19 @@ $ yarn run test:e2e
 $ yarn run test:cov
 ```
 
+## API documentation (Swagger)
+
+Start the server, then open:
+
+- Swagger UI: `http://localhost:3007/api/docs`
+- OpenAPI JSON: `http://localhost:3007/api/docs-json`
+
+Log in with `POST /api/v1/auth/login` from the **Auth** section, copy
+`accessToken`, click **Authorize**, and paste it to call admin/import routes.
+The docs cover auth, playlists (including imported playlists and the `speaker`
+filter), the channel importer, and the playlist importer. Import endpoints only
+create drafts.
+
 ## Video importer (Phase 1)
 
 A manually triggered, admin-only import of recent uploads from a fixed list of
@@ -185,16 +198,20 @@ curl -X POST http://localhost:3000/api/v1/admin/playlist-imports/run \
 `playlist` accepts a playlist URL or a bare playlist id. `title` and
 `description` are optional overrides. `speakers` (max 5) are credited on every
 newly imported video and on the playlist itself; the AI can still add up to two
-more speakers per video. `maxVideos` defaults to `50` and is capped at `200`.
+more speakers per video. `categories` (max 10) and `tags` (max 20) are stored on
+the playlist and inherited by all of its videos; AI suggestions for a new draft
+are kept alongside them. `maxVideos` defaults to `50` and is capped at `200`.
 
 The response includes the app playlist id, whether it was created or updated,
-and the usual import counters:
+the playlist's stored categories/tags, and the usual import counters:
 
 ```json
 {
   "appPlaylistId": "6ae005762190461f797ee342",
   "youtubePlaylistId": "PLxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
   "created": true,
+  "categories": ["507f1f77bcf86cd799439012"],
+  "tags": ["507f1f77bcf86cd799439013"],
   "imported": 12,
   "skippedExisting": 3,
   "skippedShorts": 2,
@@ -213,6 +230,9 @@ and the usual import counters:
   against the active catalog; an AI failure only adds a warning.
 - Videos already in the app are not re-created, but they are placed in the
   playlist in the same order as YouTube. Archived app videos are left out.
+- Playlist `categories` and `tags` are merged into every video in the playlist
+  (new and existing) without removing metadata a video already has. Re-importing
+  without them keeps the playlist's stored values.
 - Imported playlists may contain drafts until the admin publishes them; the
   playlist exists immediately so it can be reviewed. Manual playlists still
   require published videos.
