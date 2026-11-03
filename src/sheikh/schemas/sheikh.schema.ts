@@ -9,6 +9,7 @@ export class Sheikh {
     default: '',
     trim: true,
     maxlength: 100,
+    unique: true,
   })
   nameAr!: string;
 
@@ -40,20 +41,20 @@ export class Sheikh {
   imageUrl!: string;
 
   @Prop({
-    type: Number,
-    required: true,
+    type: String,
   })
-  audioId!: number;
+  ayahAudioId?: string;
 
   @Prop({
-    default: true,
+    type: String,
+  })
+  surahAudioId?: string;
+
+  @Prop({
+    default: false,
   })
   isActive!: boolean;
 
-  /**
-   * Total views of every video this speaker is credited on. Server-controlled
-   * only — it is incremented when one of their videos is watched.
-   */
   @Prop({
     type: Number,
     default: 0,
@@ -62,10 +63,16 @@ export class Sheikh {
   listens!: number;
 
   @Prop({
-    required: true,
-    ref: 'User',
+    type: String,
+    default: '',
   })
-  createdBy!: string;
+  nationalityEn!: string;
+
+  @Prop({
+    type: String,
+    default: '',
+  })
+  nationalityAr!: string;
 }
 
 export const SheikhSchema = SchemaFactory.createForClass(Sheikh);

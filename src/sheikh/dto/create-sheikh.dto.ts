@@ -1,4 +1,4 @@
-import { IsNumber, IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class CreateSheikhDto {
   @IsString()
@@ -9,8 +9,11 @@ export class CreateSheikhDto {
   @MaxLength(100)
   nameEn!: string;
 
-  @IsNumber()
-  audioId!: number;
+  @IsString()
+  ayahAudioId?: string;
+
+  @IsString()
+  surahAudioId?: string;
 
   @IsString()
   imageUrl!: string;
@@ -24,4 +27,12 @@ export class CreateSheikhDto {
   @MaxLength(400)
   @IsOptional()
   bioEn?: string;
+
+  @IsString()
+  @IsOptional()
+  nationalityEn?: string;
+
+  @IsString()
+  @IsOptional()
+  nationalityAr?: string;
 }

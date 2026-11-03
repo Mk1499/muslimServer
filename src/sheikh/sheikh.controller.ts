@@ -11,15 +11,26 @@ import { GetSheikhsDto } from './dto/get-sheikh.dto';
 export class SheikhController {
   constructor(private readonly sheikhService: SheikhService) {}
 
-  @Get('')
+  @Get('active')
+  findActive(@Query() query: GetSheikhsDto) {
+    return this.sheikhService.findActive(query);
+  }
+
+  @Get('all')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
   findAll(@Query() query: GetSheikhsDto) {
     return this.sheikhService.findAll(query);
   }
-
   @Post('create')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   createSheikh(@Body() createSheikhDto: CreateSheikhDto) {
     return this.sheikhService.create(createSheikhDto);
+  }
+
+  @Get('scrape')
+  scrapeSheikhs(@Query('page') page: number, @Query('limit') limit: number) {
+    return this.sheikhService.scrapeSheikhs(page, limit);
   }
 }
