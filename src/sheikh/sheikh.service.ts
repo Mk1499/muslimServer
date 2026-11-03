@@ -1,9 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Sheikh, SheikhDocument } from './schemas/sheikh.schema';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { CreateSheikhDto } from './dto/create-sheikh.dto';
 import { GetSheikhsDto } from './dto/get-sheikh.dto';
+import { UpdateSheikhDto } from './dto/update-sheikh.dto';
 
 @Injectable()
 export class SheikhService {
@@ -78,5 +83,31 @@ export class SheikhService {
 
     this.sheikhModel.insertMany(sheikhs);
     return sheikhs;
+  }
+
+  async update(id: string, dto: UpdateSheikhDto, updatedBy: Types.ObjectId) {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid sheikh ID');
+    }
+    const speaker = await this.sheikhModel
+      .findByIdAndUpdate(
+        id,
+        { $set: dto },
+        {
+          new: true,
+          runValidators: true,
+        },
+      )
+      // `createdBy` is a String path with a `ref`, so mongoose re-casts it to
+      // an ObjectId on hydrated reads and it serializes as garbage. It is an
+      // internal field anyway — keep it out of the response.
+      .select('-createdBy -__v')
+      .exec();
+
+    if (!speaker) {
+      throw new NotFoundException('Sheikh not found');
+    }
+
+    return speaker;
   }
 }
