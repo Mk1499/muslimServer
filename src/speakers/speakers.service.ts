@@ -32,10 +32,9 @@ export class SpeakersService {
     const [speakers, total] = await Promise.all([
       this.speakerModel
         .find({ isActive: true })
-        .select(
-          'name nameAr nameEn bio bioAr bioEn imageUrl instagramProfileUrl tiktokProfileUrl facebookProfileUrl youtubeProfileUrl views publishedVideosCount',
-        )
-        .sort({ name: 1 })
+        // .select(
+        //   'name nameAr nameEn bio bioAr bioEn imageUrl instagramProfileUrl tiktokProfileUrl facebookProfileUrl youtubeProfileUrl views publishedVideosCount',
+        // )
         .skip((page - 1) * limit)
         .limit(limit)
         .lean()

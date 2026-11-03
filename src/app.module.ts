@@ -13,6 +13,7 @@ import { PlaylistsModule } from './playlists/playlists.module';
 import { VideoImportsModule } from './video-imports/video-imports.module';
 import { PlaylistImportsModule } from './playlist-imports/playlist-imports.module';
 import { SearchModule } from './search/search.module';
+import { SheikhModule } from './sheikh/sheikh.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { SearchModule } from './search/search.module';
     VideoImportsModule,
     PlaylistImportsModule,
     SearchModule,
+    SheikhModule,
   ],
   controllers: [AppController],
   providers: [AppService],
