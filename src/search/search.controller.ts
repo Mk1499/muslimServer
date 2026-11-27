@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Inject, Query } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { SearchQueryDto } from './dto/search-query.dto';
 import { SearchService } from './search.service';
@@ -6,7 +6,9 @@ import { SearchService } from './search.service';
 @ApiTags('Search')
 @Controller('search')
 export class SearchController {
-  constructor(private readonly searchService: SearchService) {}
+  constructor(
+    @Inject(SearchService) private readonly searchService: SearchService,
+  ) {}
 
   @Get()
   search(@Query() query: SearchQueryDto) {
