@@ -249,11 +249,16 @@ the playlist's stored categories/tags, and the usual import counters:
   (new and existing) without removing metadata a video already has. Re-importing
   without them keeps the playlist's stored values.
 - Imported playlists may contain drafts until the admin publishes them; the
-  playlist exists immediately so it can be reviewed. Manual playlists still
-  require published videos.
+  playlist exists immediately so it can be reviewed. Admins can add or remove
+  existing draft videos while editing an imported playlist, and can publish all
+  of its videos with `PATCH /api/v1/playlists/:id/publish`. Manual playlists
+  still require published videos.
 - Re-importing the same YouTube playlist updates that playlist instead of
   creating a duplicate. New YouTube items are appended in playlist order and
   removed YouTube items disappear from the app playlist.
+- The playlist cover uses YouTube's playlist thumbnail when available, then
+  falls back to the first video's YouTube thumbnail. Admins can edit the cover
+  URL from the dashboard.
 - Retrieve it with `GET /api/v1/playlists/:id`, or list the playlists that
   include a speaker with `GET /api/v1/playlists?speaker=<speaker id>`.
 - A run already in progress returns `409`; a missing `YOUTUBE_API_KEY` returns

@@ -126,6 +126,20 @@ export class VideosService {
     return video.save();
   }
 
+  async getCoverForVideo(id: string): Promise<string | undefined> {
+    if (!Types.ObjectId.isValid(id)) {
+      return undefined;
+    }
+    const video = await this.videoModel
+      .findById(id)
+      .select('youtubeVideoId')
+      .lean()
+      .exec();
+    return video?.youtubeVideoId
+      ? `https://i.ytimg.com/vi/${video.youtubeVideoId}/hqdefault.jpg`
+      : undefined;
+  }
+
   async update(id: string, dto: UpdateVideoDto) {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid video ID');
@@ -504,7 +518,7 @@ export class VideosService {
         .select(
           'title description youtubeVideoId publishedAt views duration isFeatured likes dislikes',
         )
-        .sort({ publishedAt: -1, _id: -1 })
+        .sort({ createdAt: -1, _id: -1 })
         .skip(skip)
         .limit(limit)
         .lean()

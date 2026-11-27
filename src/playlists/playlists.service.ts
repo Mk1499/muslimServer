@@ -19,6 +19,8 @@ export interface ImportedPlaylistInput {
   youtubePlaylistId: string;
   title: string;
   description: string;
+  /** YouTube playlist thumbnail, or the first video's thumbnail. */
+  cover?: string;
   videos: string[];
   speakers: string[];
   /** When omitted on a re-import, the stored playlist categories are kept. */
@@ -57,6 +59,11 @@ export class PlaylistsService {
     const speakers = dto.speakers ?? [];
     const categories = dto.categories ?? [];
     const tags = dto.tags ?? [];
+    const cover =
+      dto.cover?.trim() ||
+      (videos.length > 0
+        ? await this.videosService.getCoverForVideo(videos[0])
+        : undefined);
 
     await Promise.all([
       this.assertMembersExist(videos, speakers),
@@ -70,6 +77,7 @@ export class PlaylistsService {
       speakers: speakers.map((id) => new Types.ObjectId(id)),
       categories: categories.map((id) => new Types.ObjectId(id)),
       tags: tags.map((id) => new Types.ObjectId(id)),
+      cover,
       createdBy,
     });
 
@@ -108,6 +116,7 @@ export class PlaylistsService {
       youtubePlaylistId: string;
       title: string;
       description: string;
+      cover?: string;
       videos: Types.ObjectId[];
       speakers: Types.ObjectId[];
       categories?: Types.ObjectId[];
@@ -118,7 +127,14 @@ export class PlaylistsService {
       description: input.description,
       videos: videos.map((id) => new Types.ObjectId(id)),
       speakers: speakers.map((id) => new Types.ObjectId(id)),
+      categories: categories.map((id) => new Types.ObjectId(id)),
+      tags: tags.map((id) => new Types.ObjectId(id)),
+      cover: input.cover !== undefined ? input.cover : undefined,
     };
+
+    if (input.cover !== undefined) {
+      fields.cover = input.cover;
+    }
 
     // Omitting these on a re-import keeps whatever the playlist already had.
     if (input.categories !== undefined) {
@@ -192,6 +208,7 @@ export class PlaylistsService {
       speakers: Types.ObjectId[];
       categories?: Types.ObjectId[];
       tags?: Types.ObjectId[];
+      cover?: string;
     },
   ): Promise<PlaylistDocument> {
     const playlist = await this.playlistModel
@@ -220,7 +237,7 @@ export class PlaylistsService {
       this.playlistModel
         .find(filter)
         .select(
-          'title description videos speakers categories tags youtubePlaylistId createdAt updatedAt',
+          'title description cover videos speakers categories tags youtubePlaylistId cover createdAt updatedAt',
         )
         .sort({ createdAt: -1, _id: -1 })
         .skip((page - 1) * limit)
@@ -249,7 +266,7 @@ export class PlaylistsService {
     return response;
   }
 
-  async findOne(id: string): Promise<PlaylistDocument> {
+  async findOne(id: string): Promise<{ data: PlaylistDocument }> {
     if (!Types.ObjectId.isValid(id)) {
       throw new BadRequestException('Invalid playlist ID');
     }
@@ -257,8 +274,9 @@ export class PlaylistsService {
     const playlist = await this.playlistModel
       .findById(id)
       .select(
-        'title description videos speakers categories tags youtubePlaylistId isActive createdAt updatedAt',
+        'title description cover videos speakers categories tags youtubePlaylistId isActive createdAt updatedAt',
       )
+      .populate('speakers videos')
       .lean()
       .exec();
 
@@ -271,7 +289,7 @@ export class PlaylistsService {
     playlist.categories = playlist.categories ?? [];
     playlist.tags = playlist.tags ?? [];
 
-    return playlist;
+    return { data: playlist };
   }
 
   async update(id: string, dto: UpdatePlaylistDto) {
@@ -279,10 +297,28 @@ export class PlaylistsService {
       throw new BadRequestException('Invalid playlist ID');
     }
 
+    const memberValidation =
+      dto.videos !== undefined || dto.speakers !== undefined
+        ? (async () => {
+            const current = await this.playlistModel
+              .findById(id)
+              .select('youtubePlaylistId')
+              .lean()
+              .exec();
+            if (!current) {
+              throw new NotFoundException('Playlist not found');
+            }
+            return current.youtubePlaylistId
+              ? this.assertImportedMembersExist(
+                  dto.videos ?? [],
+                  dto.speakers ?? [],
+                )
+              : this.assertMembersExist(dto.videos ?? [], dto.speakers ?? []);
+          })()
+        : Promise.resolve();
+
     await Promise.all([
-      dto.videos || dto.speakers
-        ? this.assertMembersExist(dto.videos ?? [], dto.speakers ?? [])
-        : Promise.resolve(),
+      memberValidation,
       dto.categories || dto.tags
         ? this.assertMetadataExist(dto.categories ?? [], dto.tags ?? [])
         : Promise.resolve(),
@@ -312,6 +348,21 @@ export class PlaylistsService {
     );
 
     return playlist;
+  }
+
+  async publishVideos(id: string) {
+    if (!Types.ObjectId.isValid(id)) {
+      throw new BadRequestException('Invalid playlist ID');
+    }
+    const playlist = await this.playlistModel
+      .findById(id)
+      .select('videos')
+      .lean()
+      .exec();
+    if (!playlist) {
+      throw new NotFoundException('Playlist not found');
+    }
+    return this.videosService.publishMany((playlist.videos ?? []).map(String));
   }
 
   /**

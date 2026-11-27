@@ -6,7 +6,9 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  IsUrl,
   MaxLength,
+  ValidateIf,
 } from 'class-validator';
 export class CreatePlaylistDto {
   @ApiProperty({
@@ -87,4 +89,16 @@ export class CreatePlaylistDto {
   @ArrayUnique()
   @IsMongoId({ each: true })
   tags?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Cover image URL for the playlist.',
+    type: String,
+    example: 'https://example.com/cover.jpg',
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2048)
+  @ValidateIf((_object, value) => value !== '')
+  @IsUrl({ protocols: ['https'], require_protocol: true })
+  cover?: string;
 }

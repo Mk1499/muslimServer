@@ -65,6 +65,11 @@ export class Playlist {
     required: true,
   })
   createdBy!: Types.ObjectId;
+
+  @Prop({
+    type: String,
+  })
+  cover!: string;
 }
 
 export const PlaylistSchema = SchemaFactory.createForClass(Playlist);

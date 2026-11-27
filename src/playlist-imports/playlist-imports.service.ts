@@ -476,6 +476,11 @@ export class PlaylistImportsService {
           0,
           5_000,
         ),
+        cover:
+          info.cover ||
+          (sources[0]
+            ? `https://i.ytimg.com/vi/${sources[0].youtubeVideoId}/hqdefault.jpg`
+            : undefined),
         videos: usable.map((reference) => String(reference._id)),
         speakers: [...playlistSpeakers],
         categories: prepared.categories,

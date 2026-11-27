@@ -85,6 +85,7 @@ export class PlaylistsController {
         _id: '6ae006cdcf50a141752c2d38',
         title: 'Uploads from شريف علي',
         description: '',
+        cover: 'https://i.ytimg.com/vi/aaaaaaaaaaa/hqdefault.jpg',
         videos: ['507f1f77bcf86cd799439011'],
         speakers: ['507f191e810c19729de860ea'],
         categories: ['507f1f77bcf86cd799439012'],
@@ -145,6 +146,24 @@ export class PlaylistsController {
   @Roles(UserRole.ADMIN)
   update(@Param('id') id: string, @Body() dto: UpdatePlaylistDto) {
     return this.playlistsService.update(id, dto);
+  }
+
+  @Patch(':id/publish')
+  @ApiBearerAuth('access-token')
+  @ApiOperation({
+    summary: 'Publish every video in a playlist',
+    description:
+      'Admin only. Publishes all videos in the playlist in one request.',
+  })
+  @ApiParam({ name: 'id', description: 'Playlist id.' })
+  @ApiOkResponse({ description: 'The number of playlist videos processed.' })
+  @ApiUnauthorizedResponse()
+  @ApiForbiddenResponse({ description: 'Admin role required.' })
+  @ApiNotFoundResponse({ description: 'Playlist not found.' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  publishVideos(@Param('id') id: string) {
+    return this.playlistsService.publishVideos(id);
   }
 
   /** Soft delete — see `PlaylistsService.remove`. */

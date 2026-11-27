@@ -23,6 +23,7 @@ export interface YouTubePlaylistInfo {
   youtubePlaylistId: string;
   title: string;
   description: string;
+  cover?: string;
   channelId: string;
   channelTitle: string;
   itemCount: number;
@@ -53,6 +54,7 @@ interface YouTubePlaylistsResponse {
       description?: string;
       channelId?: string;
       channelTitle?: string;
+      thumbnails?: Record<string, { url?: string }>;
     };
     contentDetails?: { itemCount?: number };
   }[];
@@ -181,6 +183,12 @@ export class YouTubeDataService {
       youtubePlaylistId: item.id,
       title: item.snippet?.title ?? '',
       description: item.snippet?.description ?? '',
+      cover:
+        item.snippet?.thumbnails?.maxres?.url ??
+        item.snippet?.thumbnails?.standard?.url ??
+        item.snippet?.thumbnails?.high?.url ??
+        item.snippet?.thumbnails?.medium?.url ??
+        item.snippet?.thumbnails?.default?.url,
       channelId: item.snippet?.channelId ?? '',
       channelTitle: item.snippet?.channelTitle ?? '',
       itemCount: item.contentDetails?.itemCount ?? 0,
@@ -377,6 +385,8 @@ export class YouTubeDataService {
         payload.error?.errors?.[0]?.reason,
       );
     }
+
+    console.log('YouTube API response payload:', payload);
 
     return payload;
   }
