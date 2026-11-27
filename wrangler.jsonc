@@ -3,7 +3,7 @@
   "name": "muslim-server",
   "main": "worker-dist/worker.js",
   "build": {
-    "command": "yarn build:worker",
+    "command": "./node_modules/.bin/tsc -p tsconfig.worker.json",
     "watch_dir": "src"
   },
   "compatibility_date": "2026-11-27",
