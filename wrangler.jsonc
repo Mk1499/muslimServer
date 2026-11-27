@@ -1,0 +1,6 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "my-nest-api",
+  "main": "src/main.ts",
+  "compatibility_date": "2026-11-27"
+}
