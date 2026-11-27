@@ -299,8 +299,11 @@ to re-run.
 
 ### Cloudflare Workers
 
-The Worker entry point is `src/worker.ts`; local Node development and production
-continue to use the Nest entry point in `src/main.ts`.
+The Worker source entry point is `src/worker.ts`. The Worker scripts compile it
+with TypeScript decorator metadata into `worker-dist/` before Wrangler bundles
+it; this is required for Nest validation and DTO transformation to work in the
+Worker runtime. Local Node development and production continue to use the Nest
+entry point in `src/main.ts`.
 
 1. Set the required Worker secrets from the repository root:
 

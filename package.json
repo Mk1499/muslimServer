@@ -7,9 +7,10 @@
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",
-    "worker:dev": "wrangler dev",
-    "worker:check": "wrangler deploy --dry-run",
-    "worker:deploy": "wrangler deploy",
+    "build:worker": "tsc -p tsconfig.worker.json",
+    "worker:dev": "yarn build:worker && wrangler dev",
+    "worker:check": "yarn build:worker && wrangler deploy --dry-run",
+    "worker:deploy": "yarn build:worker && wrangler deploy",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
