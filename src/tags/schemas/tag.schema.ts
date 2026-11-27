@@ -7,6 +7,7 @@ export type TagDocument = HydratedDocument<Tag>;
 @Schema({ timestamps: true })
 export class Tag {
   @Prop({
+    type: String,
     required: true,
     trim: true,
     maxlength: 50,
@@ -14,6 +15,7 @@ export class Tag {
   name!: string;
 
   @Prop({
+    type: String,
     default: '',
     trim: true,
     maxlength: 50,
@@ -21,6 +23,7 @@ export class Tag {
   nameAr!: string;
 
   @Prop({
+    type: String,
     default: '',
     trim: true,
     maxlength: 50,
@@ -28,6 +31,7 @@ export class Tag {
   nameEn!: string;
 
   @Prop({
+    type: String,
     required: true,
     trim: true,
     maxlength: 50,
@@ -37,6 +41,7 @@ export class Tag {
   slug!: string;
 
   @Prop({
+    type: Boolean,
     default: true,
   })
   isActive!: boolean;

@@ -8,6 +8,7 @@ export type UserDocument = HydratedDocument<User>;
 @Schema({ timestamps: true })
 export class User {
   @Prop({
+    type: String,
     required: true,
     trim: true,
     lowercase: true,
@@ -16,6 +17,7 @@ export class User {
   email!: string;
 
   @Prop({
+    type: String,
     required: true,
     select: false,
   })
@@ -30,6 +32,7 @@ export class User {
   role!: UserRole;
 
   @Prop({
+    type: Boolean,
     default: true,
   })
   isActive!: boolean;

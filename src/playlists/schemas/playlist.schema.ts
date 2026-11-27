@@ -6,6 +6,7 @@ export type PlaylistDocument = HydratedDocument<Playlist>;
 @Schema({ timestamps: true })
 export class Playlist {
   @Prop({
+    type: String,
     required: true,
     trim: true,
     maxlength: 150,
@@ -13,6 +14,7 @@ export class Playlist {
   title!: string;
 
   @Prop({
+    type: String,
     default: '',
     trim: true,
     maxlength: 5000,
@@ -55,6 +57,7 @@ export class Playlist {
   tags!: Types.ObjectId[];
 
   @Prop({
+    type: Boolean,
     default: true,
   })
   isActive!: boolean;

@@ -6,6 +6,7 @@ export type SheikhDocument = HydratedDocument<Sheikh>;
 @Schema({ timestamps: true })
 export class Sheikh {
   @Prop({
+    type: String,
     default: '',
     trim: true,
     maxlength: 100,
@@ -14,6 +15,7 @@ export class Sheikh {
   nameAr!: string;
 
   @Prop({
+    type: String,
     default: '',
     trim: true,
     maxlength: 100,
@@ -21,6 +23,7 @@ export class Sheikh {
   nameEn!: string;
 
   @Prop({
+    type: String,
     default: '',
     trim: true,
     maxlength: 2000,
@@ -28,6 +31,7 @@ export class Sheikh {
   bioAr!: string;
 
   @Prop({
+    type: String,
     default: '',
     trim: true,
     maxlength: 2000,
@@ -35,6 +39,7 @@ export class Sheikh {
   bioEn!: string;
 
   @Prop({
+    type: String,
     default: '',
     trim: true,
   })
@@ -51,6 +56,7 @@ export class Sheikh {
   surahAudioId?: string;
 
   @Prop({
+    type: Boolean,
     default: false,
   })
   isActive!: boolean;

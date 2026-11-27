@@ -6,6 +6,7 @@ export type CategoryDocument = HydratedDocument<Category>;
 @Schema({ timestamps: true })
 export class Category {
   @Prop({
+    type: String,
     required: true,
     trim: true,
     maxlength: 100,
@@ -13,6 +14,7 @@ export class Category {
   name!: string;
 
   @Prop({
+    type: String,
     default: '',
     trim: true,
     maxlength: 100,
@@ -20,6 +22,7 @@ export class Category {
   nameAr!: string;
 
   @Prop({
+    type: String,
     default: '',
     trim: true,
     maxlength: 100,
@@ -27,6 +30,7 @@ export class Category {
   nameEn!: string;
 
   @Prop({
+    type: String,
     required: true,
     unique: true,
     lowercase: true,
@@ -35,13 +39,14 @@ export class Category {
   slug!: string;
 
   @Prop({
+    type: String,
     default: '',
     trim: true,
     maxlength: 500,
   })
   description!: string;
 
-  @Prop({ default: true })
+  @Prop({ type: Boolean, default: true })
   isActive!: boolean;
 }
 

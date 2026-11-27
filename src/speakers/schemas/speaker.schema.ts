@@ -6,6 +6,7 @@ export type SpeakerDocument = HydratedDocument<Speaker>;
 @Schema({ timestamps: true })
 export class Speaker {
   @Prop({
+    type: String,
     required: true,
     trim: true,
     maxlength: 100,
@@ -13,6 +14,7 @@ export class Speaker {
   name!: string;
 
   @Prop({
+    type: String,
     default: '',
     trim: true,
     maxlength: 100,
@@ -20,6 +22,7 @@ export class Speaker {
   nameAr!: string;
 
   @Prop({
+    type: String,
     default: '',
     trim: true,
     maxlength: 100,
@@ -27,6 +30,7 @@ export class Speaker {
   nameEn!: string;
 
   @Prop({
+    type: String,
     default: '',
     trim: true,
     maxlength: 2000,
@@ -34,6 +38,7 @@ export class Speaker {
   bio!: string;
 
   @Prop({
+    type: String,
     default: '',
     trim: true,
     maxlength: 2000,
@@ -41,6 +46,7 @@ export class Speaker {
   bioAr!: string;
 
   @Prop({
+    type: String,
     default: '',
     trim: true,
     maxlength: 2000,
@@ -48,36 +54,42 @@ export class Speaker {
   bioEn!: string;
 
   @Prop({
+    type: String,
     default: '',
     trim: true,
   })
   imageUrl!: string;
 
   @Prop({
+    type: String,
     default: '',
     trim: true,
   })
   instagramProfileUrl!: string;
 
   @Prop({
+    type: String,
     default: '',
     trim: true,
   })
   tiktokProfileUrl!: string;
 
   @Prop({
+    type: String,
     default: '',
     trim: true,
   })
   facebookProfileUrl!: string;
 
   @Prop({
+    type: String,
     default: '',
     trim: true,
   })
   youtubeProfileUrl!: string;
 
   @Prop({
+    type: Boolean,
     default: true,
   })
   isActive!: boolean;
@@ -105,6 +117,7 @@ export class Speaker {
   publishedVideosCount!: number;
 
   @Prop({
+    type: String,
     required: true,
     ref: 'User',
   })
