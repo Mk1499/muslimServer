@@ -5,20 +5,20 @@ import { createApp } from './create-app';
 
 const PORT = 3000;
 
-let handler: ExportedHandler | undefined;
-let ready: Promise<void> | undefined;
-
-async function init(): Promise<void> {
+async function init(): Promise<ExportedHandler> {
   const app = await createApp();
   await app.listen(PORT);
-  handler = httpServerHandler({ port: PORT });
+  return httpServerHandler({ port: PORT });
 }
+
+// Create startup work while the Worker module is being initialized, not in a
+// fetch request. Sharing a promise created by one request can produce a
+// cross-request promise resolution error when startup outlives that request.
+const handlerReady = init();
 
 export default {
   async fetch(request, env, ctx) {
-    // Initialize once, reuse for later requests
-    ready ??= init();
-    await ready;
-    return handler!.fetch!(request, env, ctx);
+    const handler = await handlerReady;
+    return handler.fetch!(request, env, ctx);
   },
 } satisfies ExportedHandler;
