@@ -19,6 +19,9 @@ import { SheikhModule } from './sheikh/sheikh.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      // Worker bindings are exposed through process.env, but there is no
+      // deployable .env file in Workers. Keep dotenv loading for local Node.
+      ignoreEnvFile: process.env.CLOUDFLARE_WORKER === 'true',
     }),
     MongooseModule.forRootAsync({
       imports: [ConfigModule],

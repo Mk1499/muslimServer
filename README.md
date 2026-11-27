@@ -297,6 +297,32 @@ to re-run.
 
 ## Deployment
 
+### Cloudflare Workers
+
+The Worker entry point is `src/worker.ts`; local Node development and production
+continue to use the Nest entry point in `src/main.ts`.
+
+1. Set the required Worker secrets from the repository root:
+
+   ```bash
+   npx wrangler secret put MONGODB_URI
+   npx wrangler secret put JWT_SECRET
+   ```
+
+   Add `YOUTUBE_API_KEY` and `AI_API_KEY` the same way if those features are
+   enabled. Optional importer settings can be added as Worker variables in
+   `wrangler.jsonc` or in the Cloudflare dashboard.
+2. Check the bundle and start local Worker emulation with
+   `yarn worker:check` and `yarn worker:dev`.
+3. Deploy with `yarn worker:deploy`.
+
+For local Node development, set the values in `.env` and use `yarn start:dev`.
+For local Worker emulation, put the secrets in `.dev.vars` (Wrangler's local
+secret file) and run `yarn worker:dev`. Do not commit either secret file.
+MongoDB Atlas must permit connections from Cloudflare Workers; Cloudflare's
+outbound TCP address range is separate from its published IP ranges, so Atlas
+network allowlisting may need to be adjusted for your deployment.
+
 When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
 
 If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:

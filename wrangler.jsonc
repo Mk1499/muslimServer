@@ -3,13 +3,19 @@
   "name": "muslim-server",
   "main": "src/worker.ts",
   "compatibility_date": "2026-11-27",
+  "vars": {
+    "CLOUDFLARE_WORKER": "true"
+  },
   "compatibility_flags": [
     "nodejs_compat",
     "enable_nodejs_http_server_modules",
-    "nodejs_compat_populate_process_env"
+    "nodejs_compat_populate_process_env",
+    "enable_nodejs_http_modules"
   ],
   "alias": {
     "@nestjs/websockets/socket-module": "./stubs/empty.js",
-    "@nestjs/microservices/microservices-module": "./stubs/empty.js"
+    "@nestjs/microservices": "./stubs/empty.js",
+    "@nestjs/microservices/microservices-module": "./stubs/empty.js",
+    "class-transformer/storage": "./node_modules/class-transformer/cjs/storage.js"
   }
 }

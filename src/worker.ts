@@ -1,4 +1,4 @@
-// src/worker.ts
+/// <reference types="@cloudflare/workers-types" />
 import 'reflect-metadata';
 import { httpServerHandler } from 'cloudflare:node';
 import { createApp } from './create-app';

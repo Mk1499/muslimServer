@@ -71,7 +71,7 @@ export class SheikhService {
     const url = `https://way2quran.com/api/listening/world-popular-reciters?days=365&limit=${limit}&page=${page}&rankBy=sessions`;
 
     const response = await fetch(url);
-    const data = await response.json();
+    const data: any = await response.json();
     const sheikhs =
       data?.data?.rows?.map((row: any) => ({
         nameAr: row.arabicName || '',
