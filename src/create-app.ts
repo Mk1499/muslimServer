@@ -6,6 +6,13 @@ import { AppModule } from './app.module';
 export async function createApp(): Promise<INestApplication> {
   const app = await NestFactory.create(AppModule);
 
+  configureApp(app);
+
+  return app;
+}
+
+export function configureApp(app: INestApplication): void {
+
   app.setGlobalPrefix('api/v1');
 
   app.enableCors({
@@ -22,6 +29,4 @@ export async function createApp(): Promise<INestApplication> {
       transform: true,
     }),
   );
-
-  return app;
 }

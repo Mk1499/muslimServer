@@ -1,9 +1,12 @@
 // src/main.ts
+import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import { createApp } from './create-app';
+import { AppModule } from './app.module';
+import { configureApp } from './create-app';
 
 async function bootstrap() {
-  const app = await createApp();
+  const app = await NestFactory.create(AppModule);
+  configureApp(app);
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('Muslim Server API')
