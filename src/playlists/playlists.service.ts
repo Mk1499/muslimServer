@@ -10,10 +10,10 @@ import { CreatePlaylistDto } from './dto/create-playlist.dto';
 import { GetPlaylistsDto } from './dto/get-playlists.dto';
 import { UpdatePlaylistDto } from './dto/update-playlist.dto';
 import { Playlist, PlaylistDocument } from './schemas/playlist.schema';
-import { CategoriesService } from 'src/categories/categories.service';
-import { SpeakersService } from 'src/speakers/speakers.service';
-import { TagsService } from 'src/tags/tags.service';
-import { VideosService } from 'src/videos/videos.service';
+import { CategoriesService } from '../categories/categories.service';
+import { SpeakersService } from '../speakers/speakers.service';
+import { TagsService } from '../tags/tags.service';
+import { VideosService } from '../videos/videos.service';
 
 export interface ImportedPlaylistInput {
   youtubePlaylistId: string;

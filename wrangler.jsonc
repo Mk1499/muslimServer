@@ -2,6 +2,10 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "muslim-server",
   "main": "worker-dist/worker.js",
+  "build": {
+    "command": "yarn build:worker",
+    "watch_dir": "src"
+  },
   "compatibility_date": "2026-11-27",
   "vars": {
     "CLOUDFLARE_WORKER": "true"

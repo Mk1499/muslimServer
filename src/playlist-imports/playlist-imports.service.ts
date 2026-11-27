@@ -8,15 +8,15 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Types } from 'mongoose';
 
-import { CategoriesService } from 'src/categories/categories.service';
-import { PlaylistsService } from 'src/playlists/playlists.service';
-import { SpeakersService } from 'src/speakers/speakers.service';
-import { TagsService } from 'src/tags/tags.service';
-import { VideoStatus } from 'src/videos/schemas/video.schema';
+import { CategoriesService } from '../categories/categories.service';
+import { PlaylistsService } from '../playlists/playlists.service';
+import { SpeakersService } from '../speakers/speakers.service';
+import { TagsService } from '../tags/tags.service';
+import { VideoStatus } from '../videos/schemas/video.schema';
 import {
   VideosService,
   YoutubeVideoReference,
-} from 'src/videos/videos.service';
+} from '../videos/videos.service';
 
 import {
   AiMetadataService,

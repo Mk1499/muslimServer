@@ -1,10 +1,10 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 
-import { SpeakersModule } from 'src/speakers/speakers.module';
-import { VideosModule } from 'src/videos/videos.module';
-import { CategoriesModule } from 'src/categories/categories.module';
-import { TagsModule } from 'src/tags/tags.module';
+import { SpeakersModule } from '../speakers/speakers.module';
+import { VideosModule } from '../videos/videos.module';
+import { CategoriesModule } from '../categories/categories.module';
+import { TagsModule } from '../tags/tags.module';
 
 import { PlaylistsController } from './playlists.controller';
 import { PlaylistsService } from './playlists.service';

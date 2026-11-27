@@ -12,9 +12,9 @@ import { VideoStatus } from './schemas/video.schema';
 import { GetVideosQueryDto } from './dto/get-videos-query.dto';
 import { GetRelatedVideosDto } from './dto/get-related-videos.dto';
 import { UpdateVideoDto } from './dto/update-video.dto';
-import { CategoriesService } from 'src/categories/categories.service';
-import { TagsService } from 'src/tags/tags.service';
-import { SpeakersService } from 'src/speakers/speakers.service';
+import { CategoriesService } from '../categories/categories.service';
+import { TagsService } from '../tags/tags.service';
+import { SpeakersService } from '../speakers/speakers.service';
 import { Innertube } from 'youtubei.js';
 /**
  * Restricts a list query to the videos credited to one speaker. The DTO

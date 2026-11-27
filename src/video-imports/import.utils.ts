@@ -1,4 +1,4 @@
-import { CreateVideoDto } from 'src/videos/dto/create-video.dto';
+import { CreateVideoDto } from '../videos/dto/create-video.dto';
 
 import { AiMetadataSuggestion, CatalogOption } from './ai-metadata.service';
 import type { ImportIssue } from './import.types';

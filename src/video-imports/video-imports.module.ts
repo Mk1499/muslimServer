@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
 
-import { CategoriesModule } from 'src/categories/categories.module';
-import { SpeakersModule } from 'src/speakers/speakers.module';
-import { TagsModule } from 'src/tags/tags.module';
-import { VideosModule } from 'src/videos/videos.module';
+import { CategoriesModule } from '../categories/categories.module';
+import { SpeakersModule } from '../speakers/speakers.module';
+import { TagsModule } from '../tags/tags.module';
+import { VideosModule } from '../videos/videos.module';
 
 import { AiMetadataService } from './ai-metadata.service';
 import { VideoImportsController } from './video-imports.controller';

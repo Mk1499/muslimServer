@@ -8,10 +8,10 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { Types } from 'mongoose';
 
-import { CategoriesService } from 'src/categories/categories.service';
-import { SpeakersService } from 'src/speakers/speakers.service';
-import { TagsService } from 'src/tags/tags.service';
-import { VideosService } from 'src/videos/videos.service';
+import { CategoriesService } from '../categories/categories.service';
+import { SpeakersService } from '../speakers/speakers.service';
+import { TagsService } from '../tags/tags.service';
+import { VideosService } from '../videos/videos.service';
 
 import { AiMetadataService, AiMetadataSuggestion } from './ai-metadata.service';
 import type { ImportIssue } from './import.types';

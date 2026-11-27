@@ -11,10 +11,10 @@ import {
 } from '@nestjs/common';
 import { SheikhService } from './sheikh.service';
 import { CreateSheikhDto } from './dto/create-sheikh.dto';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { RolesGuard } from 'src/auth/guards/roles.guard';
-import { Roles } from 'src/auth/decorators/roles.decorator';
-import { UserRole } from 'src/users/user-role.enum';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
+import { UserRole } from '../users/user-role.enum';
 import { GetSheikhsDto } from './dto/get-sheikh.dto';
 import { UpdateSheikhDto } from './dto/update-sheikh.dto';
 import { Types } from 'mongoose';

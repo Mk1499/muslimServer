@@ -8,9 +8,9 @@
   "scripts": {
     "build": "nest build",
     "build:worker": "tsc -p tsconfig.worker.json",
-    "worker:dev": "yarn build:worker && wrangler dev",
-    "worker:check": "yarn build:worker && wrangler deploy --dry-run",
-    "worker:deploy": "yarn build:worker && wrangler deploy",
+    "worker:dev": "wrangler dev",
+    "worker:check": "wrangler deploy --dry-run",
+    "worker:deploy": "wrangler deploy",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
