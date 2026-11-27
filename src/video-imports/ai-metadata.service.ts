@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { AppConfigService } from '../config/app-config.service';
 
 export interface CatalogOption {
   id: string;
@@ -107,7 +107,7 @@ Rules:
  */
 @Injectable()
 export class AiMetadataService {
-  constructor(private readonly config: ConfigService) {}
+  constructor(private readonly config: AppConfigService) {}
 
   isConfigured(): boolean {
     try {
@@ -179,7 +179,7 @@ export class AiMetadataService {
  * Throws a descriptive error for an unknown provider or an incomplete custom
  * configuration; the importer turns that into a warning.
  */
-export function resolveAiProvider(config: ConfigService): AiProviderSettings {
+export function resolveAiProvider(config: AppConfigService): AiProviderSettings {
   const provider = (
     config.get<string>('AI_PROVIDER')?.trim() || DEFAULT_AI_PROVIDER
   ).toLowerCase();

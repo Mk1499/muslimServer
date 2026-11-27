@@ -1,4 +1,4 @@
-import { ConfigService } from '@nestjs/config';
+import { AppConfigService } from '../config/app-config.service';
 
 /**
  * The fixed list of trusted channels the importer reads from.
@@ -30,7 +30,7 @@ export const DEFAULT_IMPORT_SHORTS_MAX_DURATION_SECONDS = 180;
 /** Sanity cap for the configurable Shorts cutoff (one hour). */
 export const MAX_IMPORT_SHORTS_DURATION_SECONDS = 3_600;
 
-export function getImportChannelIds(config: ConfigService): string[] {
+export function getImportChannelIds(config: AppConfigService): string[] {
   const configured = config.get<string>('YOUTUBE_IMPORT_CHANNEL_IDS');
 
   if (configured?.trim()) {
@@ -43,7 +43,7 @@ export function getImportChannelIds(config: ConfigService): string[] {
   return [...DEFAULT_IMPORT_CHANNEL_IDS];
 }
 
-export function getImportVideosPerChannel(config: ConfigService): number {
+export function getImportVideosPerChannel(config: AppConfigService): number {
   const configured = Number(
     config.get<string>('YOUTUBE_IMPORT_MAX_VIDEOS_PER_CHANNEL'),
   );
@@ -55,7 +55,7 @@ export function getImportVideosPerChannel(config: ConfigService): number {
   return Math.min(MAX_IMPORT_VIDEOS_PER_CHANNEL, Math.floor(configured));
 }
 
-export function getShortsMaxDurationSeconds(config: ConfigService): number {
+export function getShortsMaxDurationSeconds(config: AppConfigService): number {
   const raw = config.get<string>('YOUTUBE_IMPORT_SHORTS_MAX_DURATION_SECONDS');
 
   if (raw === undefined || raw.trim() === '') {

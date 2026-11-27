@@ -5,10 +5,10 @@ import {
   Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Types } from 'mongoose';
 
 import { CategoriesService } from '../categories/categories.service';
+import { AppConfigService } from '../config/app-config.service';
 import { PlaylistsService } from '../playlists/playlists.service';
 import { SpeakersService } from '../speakers/speakers.service';
 import { TagsService } from '../tags/tags.service';
@@ -121,7 +121,7 @@ export class PlaylistImportsService {
   private running = false;
 
   constructor(
-    private readonly config: ConfigService,
+    private readonly config: AppConfigService,
     private readonly youtube: YouTubeDataService,
     private readonly ai: AiMetadataService,
     private readonly videosService: VideosService,

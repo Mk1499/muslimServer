@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { AppConfigModule } from './config/app-config.module';
+import { AppConfigService } from './config/app-config.service';
 import { VideosModule } from './videos/videos.module';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
@@ -17,16 +18,10 @@ import { SheikhModule } from './sheikh/sheikh.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({
-      isGlobal: true,
-      // Worker bindings are exposed through process.env, but there is no
-      // deployable .env file in Workers. Keep dotenv loading for local Node.
-      ignoreEnvFile: process.env.CLOUDFLARE_WORKER === 'true',
-    }),
+    AppConfigModule,
     MongooseModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
+      inject: [AppConfigService],
+      useFactory: (configService: AppConfigService) => ({
         uri: configService.getOrThrow<string>('MONGODB_URI'),
       }),
     }),

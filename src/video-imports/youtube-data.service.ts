@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { AppConfigService } from '../config/app-config.service';
 
 export interface YouTubeSourceVideo {
   youtubeVideoId: string;
@@ -103,7 +103,7 @@ const MAX_PLAYLIST_PAGES = 20;
  */
 @Injectable()
 export class YouTubeDataService {
-  constructor(private readonly config: ConfigService) {}
+  constructor(private readonly config: AppConfigService) {}
 
   isConfigured(): boolean {
     return Boolean(this.config.get<string>('YOUTUBE_API_KEY')?.trim());

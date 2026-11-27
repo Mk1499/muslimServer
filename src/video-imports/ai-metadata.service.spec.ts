@@ -1,4 +1,4 @@
-import { ConfigService } from '@nestjs/config';
+import { AppConfigService } from '../config/app-config.service';
 
 import {
   AiMetadataService,
@@ -21,7 +21,7 @@ const INPUT: AiSuggestionInput = {
 function createService(values: Record<string, string | undefined>) {
   const config = {
     get: (key: string): string | undefined => values[key],
-  } as unknown as ConfigService;
+  } as unknown as AppConfigService;
 
   return new AiMetadataService(config);
 }
@@ -102,7 +102,7 @@ describe('AiMetadataService', () => {
           AI_BASE_URL: 'https://example.test/v1/',
           AI_MODEL: 'custom-model',
         })[key],
-    } as unknown as ConfigService);
+    } as unknown as AppConfigService);
 
     expect(settings).toMatchObject({
       provider: 'groq',

@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { AppConfigService } from '../config/app-config.service';
 import { Types } from 'mongoose';
 
 import { CategoriesService } from 'src/categories/categories.service';
@@ -230,7 +230,7 @@ function createService() {
   };
 
   const service = new PlaylistImportsService(
-    config as unknown as ConfigService,
+    config as unknown as AppConfigService,
     youtube as unknown as YouTubeDataService,
     ai as unknown as AiMetadataService,
     videos as unknown as VideosService,
