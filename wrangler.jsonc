@@ -1,6 +1,15 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "my-nest-api",
-  "main": "src/main.ts",
-  "compatibility_date": "2026-11-27"
+  "name": "muslim-server",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-11-27",
+  "compatibility_flags": [
+    "nodejs_compat",
+    "enable_nodejs_http_server_modules",
+    "nodejs_compat_populate_process_env"
+  ],
+  "alias": {
+    "@nestjs/websockets/socket-module": "./stubs/empty.js",
+    "@nestjs/microservices/microservices-module": "./stubs/empty.js"
+  }
 }
